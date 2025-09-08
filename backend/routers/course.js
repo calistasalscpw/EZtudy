@@ -36,7 +36,7 @@ router.get('/', async (req, res) => {
 // GET a single course with its materials populated
 router.get('/:courseId', async (req, res) => {
     try {
-        const course = await Course.findById(req.params.id).populate('materials');
+        const course = await Course.findById(req.params.courseId).populate('materials');
         if (!course) return res.status(404).json({ message: 'Course not found' });
         res.json(course);
     } catch (err) {
@@ -61,7 +61,7 @@ router.post('/', isAdminValidator, async (req, res) => {
 // PUT (update) a course (Admin only)
 router.put('/:courseId', isAdminValidator, async (req, res) => {
     try {
-        const updatedCourse = await Course.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const updatedCourse = await Course.findByIdAndUpdate(req.params.courseId, req.body, { new: true });
         if (!updatedCourse) return res.status(404).json({ message: 'Course not found' });
         res.json(updatedCourse);
     } catch (err) {
@@ -72,14 +72,14 @@ router.put('/:courseId', isAdminValidator, async (req, res) => {
 // DELETE a course (Admin only)
 router.delete('/:courseId', isAdminValidator, async (req, res) => {
     try {
-        const course = await Course.findById(req.params.id);
+        const course = await Course.findById(req.params.courseId);
         if (!course) return res.status(404).json({ message: 'Course not found' });
 
         // Delete all materials associated with the course
         await Material.deleteMany({ _id: { $in: course.materials } });
 
         // Delete the course itself
-        await Course.findByIdAndDelete(req.params.id);
+        await Course.findByIdAndDelete(req.params.courseId);
 
         res.json({ message: 'Course and associated materials deleted' });
     } catch (err) {
