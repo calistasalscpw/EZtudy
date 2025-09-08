@@ -46,7 +46,7 @@ export const AuthProvider = ({ children }) => {
         try {
             const response = await API.post('/auth/signup', credentials);
             message.success(response.data.message || 'Signup successful! Please check your email.');
-            navigate('/login'); // Redirect to login page after signup
+            navigate('/auth/login'); // Redirect to login page after signup
         } catch (error) {
             const errorMessage = error.response?.data?.message || 'Signup failed. Please try again.';
             message.error(errorMessage);
@@ -59,7 +59,7 @@ export const AuthProvider = ({ children }) => {
             await API.post('/auth/logout');
             setUser(null);
             message.success('Logout successful!');
-            navigate('/login'); // Redirect to login page on logout
+            navigate('/auth/login'); // Redirect to login page on logout
         } catch (error) {
             message.error('Logout failed. Please try again.');
         }

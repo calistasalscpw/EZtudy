@@ -28,8 +28,8 @@ function App() {
         }}>
           <Routes>
             {/* Public Routes */}
-            <Route path='/login' element={<LoginPage/>}/>
-            <Route path='/signup' element={<SignupPage/>}/>
+            <Route path='/auth/login' element={<LoginPage/>}/>
+            <Route path='/auth/signup' element={<SignupPage/>}/>
             
             {/* Protected Routes */}
             <Route path='/' element={
