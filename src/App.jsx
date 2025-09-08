@@ -3,6 +3,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 
 import Home from './pages/Home';
+import CourseDetailPage from './pages/CourseDetailPage';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 
@@ -22,6 +23,7 @@ function App() {
         }}>
           <Routes>
             <Route path='/' element={<Home/>}/>
+            <Route path="/course/:courseId" element={<CourseDetailPage />} />
           </Routes>
         </Content>
         <Footer/>
