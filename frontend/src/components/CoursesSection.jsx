@@ -1,5 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
+import { Input, Button, Modal, Form, message } from 'antd';
+import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
+import { useAuth } from '../context/AuthContext';
+import API from '../api';
 
 // Styled components for the Course Card
 const CardWrapper = styled.div`
@@ -39,14 +44,13 @@ const CardDescription = styled.p`
   color: #8B8D98;
 `;
 
-// The reusable CourseCard component
-const CourseCard = ({ title, description }) => {
+const CourseCard = ({ course, onClick }) => {
   return (
-    <CardWrapper>
+    <CardWrapper onClick={onClick}>
       <ImagePlaceholder />
       <ContentWrapper>
-        <CardTitle>{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
+        <CardTitle>{course.title}</CardTitle>
+        <CardDescription>{course.description}</CardDescription>
       </ContentWrapper>
     </CardWrapper>
   );
@@ -54,15 +58,31 @@ const CourseCard = ({ title, description }) => {
 
 // Styled components for the main section
 const CoursesContainer = styled.section`
-  padding: 2rem 2rem 4rem 2rem;
-  background-color: #F9F9F9;
+  padding: 4rem 2rem;
+  background-color: #F9FAFB;
+  min-height: 80vh;
+`;
+
+const SectionHeader = styled.div`
+  max-width: 1200px;
+  margin: 0 auto 2rem auto;
+  text-align: center;
 `;
 
 const SectionTitle = styled.h2`
-  font-size: 2rem;
-  font-weight: 600;
-  margin-bottom: 2rem;
-  text-align: center;
+  font-size: 2.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+`;
+
+const Toolbar = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    max-width: 1200px;
+    margin-left: auto;
+    margin-right: auto;
 `;
 
 const Grid = styled.div`
@@ -81,20 +101,90 @@ const Grid = styled.div`
 `;
 
 const CoursesSection = () => {
-  const courses = [
-    { title: 'Course 1', description: 'Description for the first course.' },
-    { title: 'Course 2', description: 'Description for the second course.' },
-    { title: 'Course 3', description: 'Description for the third course.' },
-  ];
+    const { user } = useAuth();
+    const navigate = useNavigate();
+    const [courses, setCourses] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [isModalVisible, setIsModalVisible] = useState(false);
+    const [form] = Form.useForm();
+
+    const fetchCourses = async () => {
+        setLoading(true);
+        try {
+            const response = await API.get(`/courses?keyword=${searchTerm}`);
+            setCourses(response.data.data);
+        } catch (error) {
+            message.error('Failed to fetch courses.');
+        } finally {
+            setLoading(false);
+        }
+    };
+    
+    useEffect(() => {
+        fetchCourses();
+    }, []); 
+
+    const handleSearch = () => {
+        fetchCourses();
+    };
+    
+    const handleAddCourse = async (values) => {
+        try {
+            await API.post('/courses', values);
+            message.success('Course created successfully!');
+            setIsModalVisible(false);
+            form.resetFields();
+            fetchCourses(); 
+        } catch (error) {
+            message.error('Failed to create course.');
+        }
+    };
 
   return (
     <CoursesContainer>
-      <SectionTitle>Courses</SectionTitle>
+      <SectionHeader>
+          <SectionTitle>Our Courses</SectionTitle>
+      </SectionHeader>
+            
+      <Toolbar>
+        <Input
+            placeholder="Search for courses..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onPressEnter={handleSearch}
+            style={{ maxWidth: '400px' }}
+            prefix={<SearchOutlined />}
+        />
+        {user?.isAdmin && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalVisible(true)}>
+                Add Course
+            </Button>
+        )}
+      </Toolbar>
+
       <Grid>
-        {courses.map((course, index) => (
-          <CourseCard key={index} title={course.title} description={course.description} />
+        {courses.map((course) => (
+          <CourseCard key={course._id} course={course} onClick={() => navigate(`/course/${course._id}`)} />
         ))}
       </Grid>
+            
+      <Modal
+          title="Add New Course"
+          open={isModalVisible}
+          onCancel={() => setIsModalVisible(false)}
+          onOk={() => form.submit()}
+          okText="Create"
+      >
+        <Form form={form} layout="vertical" onFinish={handleAddCourse}>
+            <Form.Item name="title" label="Course Title" rules={[{ required: true }]}>
+                <Input />
+            </Form.Item>
+            <Form.Item name="description" label="Description" rules={[{ required: true }]}>
+                <Input.TextArea rows={4} />
+            </Form.Item>
+        </Form>
+      </Modal>
     </CoursesContainer>
   );
 };

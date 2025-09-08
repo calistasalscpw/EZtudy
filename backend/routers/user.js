@@ -141,4 +141,13 @@ router.get("/login/google/callback",
     }
 )
 
+router.get("/profile", passport.authenticate("jwt", { session: false }), (req, res) => {
+    if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized: No token provided or token is invalid" });
+    }
+    // Return user data (without the hashed password)
+    const { username, email, _id, isAdmin, registerType, isVerified } = req.user;
+    res.json({ username, email, _id, isAdmin, registerType, isVerified });
+});
+
 export default router;

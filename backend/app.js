@@ -5,6 +5,8 @@ import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 
 import userRouter from './routers/user.js';
+import courseRouter from './routers/course.js';
+import materialRouter from './routers/material.js';
 
 const app = express(); 
 
@@ -33,6 +35,8 @@ app.use((req, res, next) => {
 });
 
 app.use('/auth', userRouter); 
+app.use('/courses', courseRouter);
+app.use('/materials', materialRouter);
 
 app.get('/', (req, res) => {
     res.json({

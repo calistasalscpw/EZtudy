@@ -1,7 +1,9 @@
-import React, {useEffect, useState} from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { MenuOutlined, CloseOutlined } from '@ant-design/icons';
+import { MenuOutlined, CloseOutlined, UserOutlined, LogoutOutlined } from '@ant-design/icons';
+import { useAuth } from '../context/AuthContext';
+import { Dropdown, Avatar, Space } from 'antd';
 
 // --- Styled Components ---
 
@@ -83,17 +85,28 @@ const MobileMenu = styled.div`
   }
 `;
 
+const LogoutButton = styled.button`
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #8B8D98;
+    font-weight: 500;
+    font-size: 1rem;
+    font-family: inherit;
+     &:hover {
+        color: #2E5A99;
+    }
+`;
+
 // --- Navbar Component ---
 
 const Navbar = () => {
     const [isScrolled, setIsScrolled] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const { user, logout } = useAuth();
 
-    // Effect for scroll detection
     useEffect(() => {
-        const handleScroll = () => {
-            setIsScrolled(window.scrollY > 10);
-        };
+        const handleScroll = () => setIsScrolled(window.scrollY > 10);
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
@@ -102,13 +115,35 @@ const Navbar = () => {
         setIsMobileMenuOpen(false);
     };
 
+    const menuItems = [
+        {
+            key: 'logout',
+            label: 'Logout',
+            icon: <LogoutOutlined />,
+            onClick: logout,
+        },
+    ];
+
     return (
         <Header $isScrolled={isScrolled}>
             <NavContainer $isScrolled={isScrolled}>
                 <Logo to="/">Eztudy</Logo>
                 <NavLinks>
-                    <StyledLink to="/login">Login</StyledLink>
-                    <StyledLink to="/signup">Signup</StyledLink>
+                    {user ? (
+                        <Dropdown menu={{ items: menuItems }} trigger={['click']}>
+                            <a onClick={(e) => e.preventDefault()}>
+                                <Space style={{cursor: 'pointer'}}>
+                                    <Avatar style={{ backgroundColor: '#4C75C4' }} icon={<UserOutlined />} />
+                                    <span style={{color: '#333'}}>{user.username}</span>
+                                </Space>
+                            </a>
+                        </Dropdown>
+                    ) : (
+                        <>
+                            <StyledLink to="/login">Login</StyledLink>
+                            <StyledLink to="/signup">Signup</StyledLink>
+                        </>
+                    )}
                 </NavLinks>
                 <Hamburger onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
                     {isMobileMenuOpen 
@@ -118,8 +153,14 @@ const Navbar = () => {
                 </Hamburger>
             </NavContainer>
             <MobileMenu $isOpen={isMobileMenuOpen}>
-                <StyledLink to="/login" onClick={handleLinkClick}>Login</StyledLink>
-                <StyledLink to="/signup" onClick={handleLinkClick}>Signup</StyledLink>
+                 {user ? (
+                    <LogoutButton onClick={() => { handleLinkClick(); logout(); }}>Logout</LogoutButton>
+                ) : (
+                    <>
+                        <StyledLink to="/login" onClick={handleLinkClick}>Login</StyledLink>
+                        <StyledLink to="/signup" onClick={handleLinkClick}>Signup</StyledLink>
+                    </>
+                )}
             </MobileMenu>
         </Header>
     );

@@ -1,6 +1,6 @@
 import express from 'express';
-import Course from '../models/Course.js';
-import Material from '../models/Material.js';
+import Course from '../models/courses.model.js';
+import Material from '../models/materials.model.js';
 
 import { isUserValidator, isAdminValidator } from '../validators/admin.validator.js';
 
