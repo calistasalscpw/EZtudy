@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Form, Input, Button, Typography, message } from 'antd';
-import { MailOutlined, LockOutlined } from '@ant-design/icons';
+import { Form, Input, Button, Typography, message, Divider } from 'antd';
+import { MailOutlined, LockOutlined, GoogleOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
 import styled from 'styled-components';
 
@@ -42,6 +42,11 @@ const LoginForm = () => {
     }
   };
 
+  const handleGoogleLogin = () => {
+    // Redirect the browser to the backend's Google auth route
+    window.location.href = 'http://localhost:5000/auth/login/google';
+  };
+
   return (
     <FormContainer>
       <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
@@ -60,6 +65,15 @@ const LoginForm = () => {
             Login
           </StyledButton>
         </Form.Item>
+        <Divider>Or</Divider>
+        <Button 
+            icon={<GoogleOutlined />} 
+            onClick={handleGoogleLogin} 
+            block 
+            size="large"
+        >
+          Continue with Google
+        </Button>
         <Text type="secondary" style={{ textAlign: 'center', display: 'block' }}>
           Don't have an account? <Link href="/auth/signup">Sign up here!</Link>
         </Text>

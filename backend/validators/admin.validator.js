@@ -20,8 +20,6 @@ export async function isAdminValidator(req, res, next) {
         .json({ message: "You are not authorized. Please login." });
     }
 
-    // const course = await Course.findById(req.params.postId);
-
     if (req.user && req.user.isAdmin) {
         next(); 
     } else {
