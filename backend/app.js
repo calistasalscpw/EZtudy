@@ -40,6 +40,7 @@ app.use('/auth', userRouter);
 app.use('/courses', courseRouter);
 app.use('/materials', materialRouter);
 app.use('/progress', progressRouter);
+app.use('/youtube', youtubeRouter);
 
 app.get('/', (req, res) => {
     res.json({
