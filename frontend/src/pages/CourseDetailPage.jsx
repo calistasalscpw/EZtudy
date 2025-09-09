@@ -6,8 +6,8 @@ import MaterialViewer from '../components/MaterialViewer';
 import CourseHome from '../components/CourseHome';
 import { useAuth } from '../context/AuthContext';
 import API from '../api';
-import { Button, Modal, Form, Input, Select, message } from 'antd';
-import { PlusOutlined } from '@ant-design/icons';
+import { Button, Modal, Form, Input, Select, message, Upload } from 'antd';
+import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
 
 const { Option } = Select;
 
@@ -37,30 +37,45 @@ const CourseDetailPage = () => {
     const { user } = useAuth();
     const { courseId } = useParams();
     const [course, setCourse] = useState(null);
+    const [progress, setProgress] = useState({ completedMaterials: [], percentage: 0 });
     const [selectedMaterial, setSelectedMaterial] = useState(null);
     const [isModalVisible, setIsModalVisible] = useState(false);
+    const [materialType, setMaterialType] = useState('video');
     const [form] = Form.useForm();
 
-    const fetchCourseDetails = async () => {
+    const fetchCourseAndProgress = async () => {
         try {
             const response = await API.get(`/courses/${courseId}`);
-            setCourse(response.data);
+            setCourse(response.data.course);
+            setProgress(response.data.progress || { completedMaterials: [], percentage: 0 });
         } catch (error) {
             message.error('Could not load course details.');
         }
     };
 
     useEffect(() => {
-        fetchCourseDetails();
+        fetchCourseAndProgress();
     }, [courseId]);
     
     const handleAddMaterial = async (values) => {
+        const formData = new FormData();
+        formData.append('title', values.title);
+        formData.append('type', values.type);
+
+        if (values.type === 'file') {
+            formData.append('materialFile', values.materialFile.file.originFileObj);
+        } else {
+            formData.append('source', values.source);
+        }
+
         try {
-            await API.post(`/courses/${courseId}/materials`, values);
+            await API.post(`/courses/${courseId}/materials`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
             message.success('Material added successfully!');
             setIsModalVisible(false);
             form.resetFields();
-            fetchCourseDetails();
+            fetchCourseAndProgress();
         } catch (error) {
             message.error('Failed to add material.');
         }
@@ -83,18 +98,19 @@ const CourseDetailPage = () => {
                 onSelectMaterial={setSelectedMaterial}
             />
             <MainContent>
-                 {user?.isAdmin && (
-                    <AdminControls>
-                        <Button icon={<PlusOutlined />} onClick={() => setIsModalVisible(true)}>
-                            Upload Material
-                        </Button>
-                    </AdminControls>
-                )}
-
-                {selectedMaterial ? (
-                    <MaterialViewer material={selectedMaterial} onBack={() => setSelectedMaterial(null)} />
+                 {selectedMaterial ? (
+                    <MaterialViewer 
+                        material={selectedMaterial} 
+                        onBack={() => setSelectedMaterial(null)}
+                        refreshData={fetchCourseAndProgress} 
+                    />
                 ) : (
-                    <CourseHome course={course} onSelectMaterial={setSelectedMaterial} />
+                    <CourseHome 
+                        course={course} 
+                        onSelectMaterial={setSelectedMaterial}
+                        onAddMaterial={() => setIsModalVisible(true)} 
+                        refreshData={fetchCourseAndProgress}
+                    />
                 )}
             </MainContent>
             
@@ -103,21 +119,28 @@ const CourseDetailPage = () => {
                 open={isModalVisible}
                 onCancel={() => setIsModalVisible(false)}
                 onOk={() => form.submit()}
-                okText="Add"
             >
                 <Form form={form} layout="vertical" onFinish={handleAddMaterial}>
                     <Form.Item name="title" label="Material Title" rules={[{ required: true }]}>
                         <Input />
                     </Form.Item>
                     <Form.Item name="type" label="Type" rules={[{ required: true }]}>
-                        <Select>
+                        <Select onChange={(value) => setMaterialType(value)} placeholder="Select material type">
                             <Option value="video">YouTube Video</Option>
-                            <Option value="file">File (PDF, etc.)</Option>
+                            <Option value="file">File Upload</Option>
                         </Select>
                     </Form.Item>
-                     <Form.Item name="source" label="Source (YouTube Video ID or File URL)" rules={[{ required: true }]}>
-                        <Input />
-                    </Form.Item>
+                    {materialType === 'video' ? (
+                        <Form.Item name="source" label="YouTube Video ID" rules={[{ required: true }]}>
+                            <Input placeholder="e.g., 13p3ALGsl4w" />
+                        </Form.Item>
+                    ) : (
+                        <Form.Item name="materialFile" label="Upload File" rules={[{ required: true }]}>
+                            <Upload maxCount={1} beforeUpload={() => false}>
+                                <Button icon={<UploadOutlined />}>Select File</Button>
+                            </Upload>
+                        </Form.Item>
+                    )}
                 </Form>
             </Modal>
         </PageWrapper>

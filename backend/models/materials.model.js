@@ -8,13 +8,16 @@ const MaterialSchema = new mongoose.Schema(
         },
         type: { 
             type: String, 
-            enum: ['file', 'video', 'quiz'], 
+            enum: ['file', 'video'], 
             required: true 
         },
         source: { 
             type: String, 
             required: true 
-        }, // URL for video, file path, or quiz ID
+        }, 
+        fileName: String,
+        filePath: String,
+        fileType: String,
         course: { 
             type: mongoose.Schema.Types.ObjectId, 
             ref: 'Course' 

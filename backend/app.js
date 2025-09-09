@@ -7,6 +7,7 @@ import cookieParser from 'cookie-parser';
 import userRouter from './routers/user.js';
 import courseRouter from './routers/course.js';
 import materialRouter from './routers/material.js';
+import progressRouter from './routers/progress.js';
 
 const app = express(); 
 
@@ -37,6 +38,7 @@ app.use((req, res, next) => {
 app.use('/auth', userRouter); 
 app.use('/courses', courseRouter);
 app.use('/materials', materialRouter);
+app.use('/progress', progressRouter);
 
 app.get('/', (req, res) => {
     res.json({
@@ -45,6 +47,9 @@ app.get('/', (req, res) => {
         timestamp: new Date().toISOString(),
         endpoints: {
             auth: '/auth/*',
+            course: '/courses/*',
+            material: '/materials/*',
+            progress: '/progress/*'
         }
     });
 });
@@ -56,7 +61,7 @@ app.use('/*splat', (req, res) => {
         success: false,
         message: 'Endpoint not found',
         path: req.originalUrl,
-        availableEndpoints: ['/auth']
+        availableEndpoints: ['/auth', '/courses', '/materials', '/progress']
     });
 });
 

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
-import { Input, Button, Modal, Form, message } from 'antd';
-import { PlusOutlined, SearchOutlined } from '@ant-design/icons';
+import { Input, Button, Modal, Form, message, Dropdown, Space } from 'antd';
+import { PlusOutlined, SearchOutlined, EditOutlined, DeleteOutlined, MoreOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
 import API from '../api';
 
@@ -15,6 +15,7 @@ const CardWrapper = styled.div`
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
   cursor: pointer;
   transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+  position: relative;
 
   &:hover {
     transform: translateY(-5px);
@@ -44,14 +45,39 @@ const CardDescription = styled.p`
   color: #8B8D98;
 `;
 
-const CourseCard = ({ course, onClick }) => {
+const AdminCourseActions = styled.div`
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(4px);
+    border-radius: 16px;
+    padding: 4px;
+`;
+
+const CourseCard = ({ course, onEdit, onDelete }) => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const menuItems = [
+        { key: 'edit', label: 'Edit', icon: <EditOutlined />, onClick: (e) => { e.stopPropagation(); onEdit(course); } },
+        { key: 'delete', label: 'Delete', icon: <DeleteOutlined />, danger: true, onClick: (e) => { e.stopPropagation(); onDelete(course._id); } }
+  ];
+  
   return (
-    <CardWrapper onClick={onClick}>
-      <ImagePlaceholder />
-      <ContentWrapper>
-        <CardTitle>{course.title}</CardTitle>
-        <CardDescription>{course.description}</CardDescription>
-      </ContentWrapper>
+    <CardWrapper onClick={() => navigate(`/course/${course._id}`)}>
+        {user?.isAdmin && (
+            <AdminCourseActions>
+                <Dropdown menu={{ items: menuItems }} trigger={['click']} placement="bottomRight">
+                    <Button type="text" shape="circle" icon={<MoreOutlined />} onClick={(e) => e.stopPropagation()} />
+                </Dropdown>
+            </AdminCourseActions>
+        )}
+        <ImagePlaceholder />
+        <ContentWrapper>
+            <CardTitle>{course.title}</CardTitle>
+            <CardDescription>{course.description}</CardDescription>
+        </ContentWrapper>
     </CardWrapper>
   );
 };
@@ -102,11 +128,11 @@ const Grid = styled.div`
 
 const CoursesSection = () => {
     const { user } = useAuth();
-    const navigate = useNavigate();
     const [courses, setCourses] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [isModalVisible, setIsModalVisible] = useState(false);
+    const [editingCourse, setEditingCourse] = useState(null);
     const [form] = Form.useForm();
 
     const fetchCourses = async () => {
@@ -125,20 +151,50 @@ const CoursesSection = () => {
         fetchCourses();
     }, []); 
 
-    const handleSearch = () => {
-        fetchCourses();
-    };
-    
-    const handleAddCourse = async (values) => {
+    const handleFormSubmit = async (values) => {
         try {
-            await API.post('/courses', values);
-            message.success('Course created successfully!');
+            if (editingCourse) {
+                await API.put(`/courses/${editingCourse._id}`, values);
+                message.success('Course updated!');
+            } else {
+                await API.post('/courses', values);
+                message.success('Course created!');
+            }
             setIsModalVisible(false);
             form.resetFields();
-            fetchCourses(); 
+            setEditingCourse(null);
+            fetchCourses();
         } catch (error) {
-            message.error('Failed to create course.');
+            message.error('Operation failed.');
         }
+    };
+
+    const handleEditCourse = (course) => {
+        setEditingCourse(course);
+        form.setFieldsValue(course);
+        setIsModalVisible(true);
+    };
+
+    const handleDeleteCourse = (courseId) => {
+        Modal.confirm({
+            title: 'Are you sure you want to delete this course?',
+            content: 'All materials within this course will also be deleted.',
+            okText: 'Delete',
+            okType: 'danger',
+            onOk: async () => {
+                try {
+                    await API.delete(`/courses/${courseId}`);
+                    message.success('Course deleted.');
+                    fetchCourses();
+                } catch (error) {
+                    message.error('Failed to delete course.');
+                }
+            }
+        });
+    };
+
+    const handleSearch = () => {
+        fetchCourses();
     };
 
   return (
@@ -165,18 +221,18 @@ const CoursesSection = () => {
 
       <Grid>
         {courses.map((course) => (
-          <CourseCard key={course._id} course={course} onClick={() => navigate(`/course/${course._id}`)} />
+            <CourseCard key={course._id} course={course} onEdit={handleEditCourse} onDelete={handleDeleteCourse} />
         ))}
       </Grid>
             
       <Modal
-          title="Add New Course"
+          title={editingCourse ? "Edit Course" : "Add New Course"}
           open={isModalVisible}
-          onCancel={() => setIsModalVisible(false)}
+          onCancel={() => { setIsModalVisible(false); setEditingCourse(null); form.resetFields(); }}
           onOk={() => form.submit()}
-          okText="Create"
+          okText={editingCourse ? "Save Changes" : "Create"}
       >
-        <Form form={form} layout="vertical" onFinish={handleAddCourse}>
+        <Form form={form} layout="vertical" onFinish={handleFormSubmit}>
             <Form.Item name="title" label="Course Title" rules={[{ required: true }]}>
                 <Input />
             </Form.Item>

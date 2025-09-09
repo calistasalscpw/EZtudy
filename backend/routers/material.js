@@ -1,32 +1,52 @@
 import express from 'express';
 import Course from '../models/courses.model.js';
 import Material from '../models/materials.model.js';
+import upload from '../modules/upload.module.js';
 
 import { isUserValidator, isAdminValidator } from '../validators/admin.validator.js';
 
 // Using { mergeParams: true } allows us to access :courseId from the parent router
 const router = express.Router({ mergeParams: true });
 
-// POST /courses/:courseId/materials
+// POST /courses/:courseId/materials - Create a new material
 router.post('/', isAdminValidator, async (req, res) => {
-    try {
+    upload(req, res, async (err) => {
+        if (err) {
+            return res.status(400).json({ message: err });
+        }
+
         const { courseId } = req.params;
+        const { title, type, source } = req.body;
+
         const course = await Course.findById(courseId);
         if (!course) return res.status(404).json({ message: 'Course not found' });
 
-        const material = new Material({
-            ...req.body,
-            course: courseId
-        });
-        await material.save();
+        let materialData = { title, type, course: courseId };
 
-        course.materials.push(material._id);
-        await course.save();
+        if (type === 'file') {
+            if (!req.file) {
+                return res.status(400).json({ message: 'File is required for material type "file".' });
+            }
+            materialData.source = `/uploads/${req.file.filename}`; // URL path to access the file
+            materialData.fileName = req.file.originalname;
+            materialData.filePath = req.file.path;
+            materialData.fileType = req.file.mimetype;
+        } else { // 'video'
+            materialData.source = source;
+        }
 
-        res.status(201).json(material);
-    } catch (err) {
-        res.status(400).json({ message: err.message });
-    }
+        try {
+            const material = new Material(materialData);
+            await material.save();
+
+            course.materials.push(material._id);
+            await course.save();
+
+            res.status(201).json(material);
+        } catch (dbErr) {
+            res.status(400).json({ message: dbErr.message });
+        }
+    });
 });
 
 // PUT /courses/:courseId/materials/:materialId

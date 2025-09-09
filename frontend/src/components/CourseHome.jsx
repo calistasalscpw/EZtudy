@@ -1,7 +1,9 @@
 import React from 'react';
 import styled from 'styled-components';
-import { Progress, List } from 'antd';
-import { CheckCircleFilled } from '@ant-design/icons';
+import { Progress, List, Button, message } from 'antd';
+import { CheckCircleFilled, PlusOutlined } from '@ant-design/icons';
+import { useAuth } from '../context/AuthContext';
+import API from '../api';
 
 const Wrapper = styled.div``;
 
@@ -31,38 +33,84 @@ const MaterialListCard = styled.div`
   padding: 1.5rem;
 `;
 
-const CourseHome = ({ course, onSelectMaterial }) => {
+const MaterialListHeader = styled.div`
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+`;
+
+
+const CourseHome = ({ course, onSelectMaterial, onAddMaterial, progress, refreshData }) => {
+    const { user } = useAuth();
+
+    const handleMarkAsComplete = async (materialId) => {
+        if (user && !user.isAdmin) {
+            try {
+                // Prevent re-marking
+                if (progress.completedMaterials.includes(materialId)) return;
+                
+                await API.post('/progress/complete', {
+                    courseId: course._id,
+                    materialId: materialId,
+                });
+                refreshData();
+            } catch (error) {
+                console.error("Failed to update progress", error);
+            }
+        }
+    };
+    
     return (
         <Wrapper>
             <Header>
                 <Title>{course.title}</Title>
-                <ProgressText>Overall study progress: {course.progress}%</ProgressText>
+                <ProgressText>Overall study progress: {Math.round(progress.percentage)}%</ProgressText>
                 <Progress 
-                    percent={course.progress} 
+                    percent={progress.percentage} 
                     strokeColor={{
                         '0%': '#EDDD53',
                         '50%': '#57C785',
                         '100%': '#2A7B9B',
                     }} 
-                    status="success" 
+                    // status="success" 
                 />
             </Header>
             <MaterialListCard>
-                <h2 style={{fontSize: '1.25rem'}}>List of learning materials</h2>
+                <MaterialListHeader>
+                    <h2 style={{fontSize: '1.25rem', margin: 0}}>List of learning materials</h2>
+                    {user?.isAdmin && (
+                         <Button
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            onClick={onAddMaterial}
+                            style={{ background: 'linear-gradient(to right, #4C75C4, #80A8F1)', border: 'none' }}
+                        >
+                            Add Material
+                        </Button>
+                    )}
+                </MaterialListHeader>
                 <List
                     itemLayout="horizontal"
                     dataSource={course.materials}
-                    renderItem={(item) => (
-                        <List.Item
-                            style={{cursor: 'pointer'}}
-                            onClick={() => onSelectMaterial(item)}
-                            actions={[<CheckCircleFilled style={{color: 'green', fontSize: '1.2rem'}}/>]}
-                        >
-                            <List.Item.Meta
-                                title={<a onClick={() => onSelectMaterial(item)}>{item.title}</a>}
-                            />
-                        </List.Item>
-                    )}
+                    renderItem={(item) => {
+                        const isCompleted = progress.completedMaterials?.includes(item._id);
+                        return (
+                            <List.Item
+                                style={{cursor: 'pointer'}}
+                                onClick={() => {
+                                    onSelectMaterial(item);
+                                    handleMarkAsComplete(item._id);
+                                }}
+                                actions={!user?.isAdmin && isCompleted ? 
+                                    [<CheckCircleFilled style={{ color: '#57C785', fontSize: '1.2rem' }} />] : []}
+                            >
+                                <List.Item.Meta
+                                    title={<a>{item.title}</a>}
+                                />
+                            </List.Item>
+                        );
+                    }}
                 />
             </MaterialListCard>
         </Wrapper>

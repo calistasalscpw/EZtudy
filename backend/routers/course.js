@@ -1,6 +1,7 @@
 import express from 'express';
 import Course from '../models/courses.model.js';
 import Material from '../models/materials.model.js';
+import Progress from '../models/progress.model.js';
 import materialRouter from './material.js'; 
 
 import { isUserValidator, isAdminValidator } from '../validators/admin.validator.js';
@@ -33,12 +34,29 @@ router.get('/', async (req, res) => {
     }
 });
 
-// GET a single course with its materials populated
+// GET a single course with its materials populated AND user progress
 router.get('/:courseId', async (req, res) => {
     try {
         const course = await Course.findById(req.params.courseId).populate('materials');
         if (!course) return res.status(404).json({ message: 'Course not found' });
-        res.json(course);
+
+        let progressData = {
+            completedMaterials: [],
+            percentage: 0
+        };
+
+        // If a user is logged in, fetch their progress
+        if (req.user) {
+            const progress = await Progress.findOne({ user: req.user._id, course: req.params.courseId });
+            if (progress) {
+                progressData.completedMaterials = progress.completedMaterials;
+                if (course.materials.length > 0) {
+                    progressData.percentage = (progress.completedMaterials.length / course.materials.length) * 100;
+                }
+            }
+        }
+
+        res.json({ course, progress: progressData });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }

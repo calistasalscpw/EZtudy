@@ -26,7 +26,7 @@ const UserSchema = new mongoose.Schema(
             default: 'normal' 
         },
         socialId: String,
-        // courses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Course' }]
+        courses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Course' }],
         isVerified: {
             type: Boolean,
             default: false
