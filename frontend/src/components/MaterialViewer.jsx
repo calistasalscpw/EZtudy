@@ -5,13 +5,7 @@ import { ArrowLeftOutlined, EditOutlined, DeleteOutlined, MoreOutlined } from '@
 import { useAuth } from '../context/AuthContext';
 import API from '../api';
 
-import { Document, Page, pdfjs } from 'react-pdf';
-import 'react-pdf/dist/Page/AnnotationLayer.css';
-import 'react-pdf/dist/Page/TextLayer.css';
-
-import workerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
-
-pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
+import PdfViewer from './PDFViewer';
 
 const ViewerWrapper = styled.div``;
 
@@ -49,24 +43,6 @@ const VideoContainer = styled.div`
   }
 `;
 
-const PDFViewerContainer = styled.div`
-    border: 1px solid #e8e8e8;
-    border-radius: 8px;
-    overflow: hidden;
-    margin-bottom: 1rem;
-    .react-pdf__Page__canvas {
-        margin: 0 auto; // Center the PDF page
-    }
-`;
-
-const PaginationControls = styled.div`
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 1rem;
-    gap: 1rem;
-`;
-
 const Placeholder = styled.div`
   display: flex;
   justify-content: center;
@@ -78,18 +54,8 @@ const Placeholder = styled.div`
   font-size: 1.5rem;
 `;
 
-const MaterialViewer = ({ material, onBack, refreshData, onEdit, onDelete }) => {
+const MaterialViewer = ({ material, onBack, onEdit, onDelete }) => {
     const { user } = useAuth();
-
-    const [numPages, setNumPages] = useState(null);
-    const [pageNumber, setPageNumber] = useState(1);
-
-    const onDocumentLoadSuccess = ({ numPages }) => {
-        setNumPages(numPages);
-    };
-
-    const goToPrevPage = () => setPageNumber(prev => Math.max(prev - 1, 1));
-    const goToNextPage = () => setPageNumber(prev => Math.min(prev + 1, numPages));
 
     const handleDelete = () => {
         if (onDelete) {
@@ -115,6 +81,7 @@ const MaterialViewer = ({ material, onBack, refreshData, onEdit, onDelete }) => 
     const renderContent = () => {
         if (!material) return null;
         const videoId = material.type === 'video' ? material.source : '';
+        const fileUrl = `http://localhost:5000${material.source}`;
 
         switch (material.type) {
             case 'video':
@@ -129,43 +96,22 @@ const MaterialViewer = ({ material, onBack, refreshData, onEdit, onDelete }) => 
                     </VideoContainer>
                 );
             case 'file':
-                const fileUrl = `http://localhost:5000${material.source}`;
-                return (
-                    <div>
-                        {/* Download button first */}
-                        <div style={{ marginBottom: '1.5rem' }}>
-                           <a href={fileUrl} download={material.fileName}>
-                                <Button type="primary">Download {material.fileName}</Button>
-                            </a>
-                        </div>
-                        
-                        {/* PDF Viewer */}
-                        <PDFViewerContainer>
-                            <Document
-                                file={fileUrl}
-                                onLoadSuccess={onDocumentLoadSuccess}
-                                loading="Loading PDF..."
-                            >
-                                <Page pageNumber={pageNumber} />
-                            </Document>
-                        </PDFViewerContainer>
-
-                        {/* Pagination Controls */}
-                        {numPages && (
-                             <PaginationControls>
-                                <Button onClick={goToPrevPage} disabled={pageNumber <= 1}>
-                                    Previous
-                                </Button>
-                                <span>
-                                    Page {pageNumber} of {numPages}
-                                </span>
-                                <Button onClick={goToNextPage} disabled={pageNumber >= numPages}>
-                                    Next
-                                </Button>
-                            </PaginationControls>
-                        )}
-                    </div>
-                );
+                if (material.fileName.endsWith('.pdf')) {
+                    return <PdfViewer fileUrl={fileUrl} />;
+                } else if (/\.(jpg|jpeg|png|gif)$/i.test(material.fileName)) {
+                    return <img src={fileUrl} alt={material.title} style={{ maxWidth: '100%' }} />;
+                } else if (/\.(ppt|pptx|doc|docx)$/i.test(material.fileName)) {
+                    return (
+                        <iframe
+                            src={`https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(fileUrl)}`}
+                            width="100%"
+                            height="600px"
+                            frameBorder="0"
+                        ></iframe>
+                    );
+                } else {
+                    return <a href={fileUrl} target="_blank" rel="noopener noreferrer">Download {material.fileName}</a>;
+                }
             default:
                 return <Placeholder>Content for "{material.title}"</Placeholder>;
 
