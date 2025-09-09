@@ -42,6 +42,7 @@ const CourseDetailPage = () => {
     const [deletingMaterial, setDeletingMaterial] = useState(null);
 
     const [materialType, setMaterialType] = useState('video');
+    const [files, setFiles] = useState([]);
     
     const [addForm] = Form.useForm();
     const [editForm] = Form.useForm();
@@ -65,10 +66,13 @@ const CourseDetailPage = () => {
         formData.append('title', values.title);
         formData.append('type', values.type);
 
-        if (values.type === 'file') {
-            formData.append('materialFile', values.materialFile.file.originFileObj);
-        } else {
+        if (values.type === 'file' && values.materialFile?.[0]?.originFileObj) {
+            formData.append('materialFile', values.materialFile[0].originFileObj);
+        } else if (values.type === 'video') {
             formData.append('source', values.source);
+        } else {
+            message.error('Please select a file to upload.');
+            return;
         }
 
         try {
@@ -78,6 +82,7 @@ const CourseDetailPage = () => {
             message.success('Material added successfully!');
             setIsAddModalVisible(false);
             addForm.resetFields();
+            setFiles([]);
             fetchCourseAndProgress();
         } catch (error) {
             message.error('Failed to add material.');
@@ -187,8 +192,18 @@ const CourseDetailPage = () => {
                             <Input placeholder="e.g., 13p3ALGsl4w" />
                         </Form.Item>
                     ) : (
-                        <Form.Item name="materialFile" label="Upload File" rules={[{ required: true }]}>
-                            <Upload maxCount={1} beforeUpload={() => false}>
+                        <Form.Item name="materialFile"
+                            label="Upload File"
+                            valuePropName="fileList"
+                            getValueFromEvent={e => e.fileList}
+                            rules={[{ required: true, message: 'Please upload a file' }]}
+                        >
+                            <Upload 
+                                fileList={files} 
+                                onChange={({ fileList: newFileList }) => setFiles(newFileList)}
+                                beforeUpload={() => false} 
+                                maxCount={1}
+                            >
                                 <Button icon={<UploadOutlined />}>Select File</Button>
                             </Upload>
                         </Form.Item>

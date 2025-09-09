@@ -1,9 +1,17 @@
-import React from 'react';
+import React, { useState } from 'react';
 import styled from 'styled-components';
 import { Button, Dropdown, Space, Modal, message } from 'antd';
 import { ArrowLeftOutlined, EditOutlined, DeleteOutlined, MoreOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
 import API from '../api';
+
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/Page/AnnotationLayer.css';
+import 'react-pdf/dist/Page/TextLayer.css';
+
+import workerSrc from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+
+pdfjs.GlobalWorkerOptions.workerSrc = workerSrc;
 
 const ViewerWrapper = styled.div``;
 
@@ -41,6 +49,24 @@ const VideoContainer = styled.div`
   }
 `;
 
+const PDFViewerContainer = styled.div`
+    border: 1px solid #e8e8e8;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    .react-pdf__Page__canvas {
+        margin: 0 auto; // Center the PDF page
+    }
+`;
+
+const PaginationControls = styled.div`
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 1rem;
+    gap: 1rem;
+`;
+
 const Placeholder = styled.div`
   display: flex;
   justify-content: center;
@@ -54,6 +80,16 @@ const Placeholder = styled.div`
 
 const MaterialViewer = ({ material, onBack, refreshData, onEdit, onDelete }) => {
     const { user } = useAuth();
+
+    const [numPages, setNumPages] = useState(null);
+    const [pageNumber, setPageNumber] = useState(1);
+
+    const onDocumentLoadSuccess = ({ numPages }) => {
+        setNumPages(numPages);
+    };
+
+    const goToPrevPage = () => setPageNumber(prev => Math.max(prev - 1, 1));
+    const goToNextPage = () => setPageNumber(prev => Math.min(prev + 1, numPages));
 
     const handleDelete = () => {
         if (onDelete) {
@@ -93,9 +129,46 @@ const MaterialViewer = ({ material, onBack, refreshData, onEdit, onDelete }) => 
                     </VideoContainer>
                 );
             case 'file':
-               return <Placeholder><a href={`http://localhost:5000${material.source}`} target="_blank" rel="noopener noreferrer">View {material.fileName}</a></Placeholder>;
+                const fileUrl = `http://localhost:5000${material.source}`;
+                return (
+                    <div>
+                        {/* Download button first */}
+                        <div style={{ marginBottom: '1.5rem' }}>
+                           <a href={fileUrl} download={material.fileName}>
+                                <Button type="primary">Download {material.fileName}</Button>
+                            </a>
+                        </div>
+                        
+                        {/* PDF Viewer */}
+                        <PDFViewerContainer>
+                            <Document
+                                file={fileUrl}
+                                onLoadSuccess={onDocumentLoadSuccess}
+                                loading="Loading PDF..."
+                            >
+                                <Page pageNumber={pageNumber} />
+                            </Document>
+                        </PDFViewerContainer>
+
+                        {/* Pagination Controls */}
+                        {numPages && (
+                             <PaginationControls>
+                                <Button onClick={goToPrevPage} disabled={pageNumber <= 1}>
+                                    Previous
+                                </Button>
+                                <span>
+                                    Page {pageNumber} of {numPages}
+                                </span>
+                                <Button onClick={goToNextPage} disabled={pageNumber >= numPages}>
+                                    Next
+                                </Button>
+                            </PaginationControls>
+                        )}
+                    </div>
+                );
             default:
                 return <Placeholder>Content for "{material.title}"</Placeholder>;
+
         }
     };
 

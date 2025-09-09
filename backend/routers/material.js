@@ -10,33 +10,41 @@ import { isUserValidator, isAdminValidator } from '../validators/admin.validator
 const router = express.Router({ mergeParams: true });
 
 // POST /courses/:courseId/materials - Create a new material
-router.post('/', isAdminValidator, async (req, res) => {
-    upload(req, res, async (err) => {
+router.post('/', isAdminValidator, (req, res) => {
+    upload(req, res, async (err) => { 
         if (err) {
-            return res.status(400).json({ message: err });
+            console.error("Multer error:", err);
+            return res.status(400).json({ message: err.message || err });
         }
+        console.log("Uploaded file:", req.file);
+        console.log("Request body:", req.body);
 
         const { courseId } = req.params;
         const { title, type, source } = req.body;
 
-        const course = await Course.findById(courseId);
-        if (!course) return res.status(404).json({ message: 'Course not found' });
-
-        let materialData = { title, type, course: courseId };
-
-        if (type === 'file') {
-            if (!req.file) {
-                return res.status(400).json({ message: 'File is required for material type "file".' });
-            }
-            materialData.source = `/uploads/${req.file.filename}`; // URL path to access the file
-            materialData.fileName = req.file.originalname;
-            materialData.filePath = req.file.path;
-            materialData.fileType = req.file.mimetype;
-        } else { // 'video'
-            materialData.source = source;
-        }
-
         try {
+            const course = await Course.findById(courseId);
+            if (!course) {
+                return res.status(404).json({ message: 'Course not found' });
+            }
+
+            let materialData = { title, type, course: courseId };
+
+            if (type === 'file') {
+                if (!req.file) {
+                    return res.status(400).json({ message: 'File is required and was not uploaded successfully.' });
+                }
+                materialData.source = `/uploads/${req.file.filename}`; 
+                materialData.fileName = req.file.originalname;
+                materialData.filePath = req.file.path;
+                materialData.fileType = req.file.mimetype;
+            } else { // 'video' type
+                 if (!source) {
+                    return res.status(400).json({ message: 'Source URL is required for video type.' });
+                 }
+                materialData.source = source;
+            }
+        
             const material = new Material(materialData);
             await material.save();
 
@@ -45,7 +53,7 @@ router.post('/', isAdminValidator, async (req, res) => {
 
             res.status(201).json(material);
         } catch (dbErr) {
-            res.status(400).json({ message: dbErr.message });
+            res.status(500).json({ message: dbErr.message });
         }
     });
 });
