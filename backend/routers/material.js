@@ -1,4 +1,5 @@
 import express from 'express';
+import mongoose from 'mongoose';
 import Course from '../models/courses.model.js';
 import Material from '../models/materials.model.js';
 import upload from '../modules/upload.module.js';
@@ -66,16 +67,23 @@ router.delete('/:materialId', isAdminValidator, async (req, res) => {
     try {
         const { courseId, materialId } = req.params;
 
-        await Course.findByIdAndUpdate(courseId, {
-            $pull: { materials: materialId }
+        const updatedCourse = await Course.findByIdAndUpdate(courseId, {
+            $pull: { materials: new mongoose.Types.ObjectId(materialId) }
         });
 
+        if (!updatedCourse) {
+            return res.status(404).json({ message: "Course not found or material not in course" });
+        }
+
         const deletedMaterial = await Material.findByIdAndDelete(materialId);
-        if (!deletedMaterial) return res.status(404).json({ message: 'Material not found' });
+        if (!deletedMaterial) {
+            return res.status(404).json({ message: 'Material document not found' });
+        }
 
         res.status(204).send(); 
     } catch (err) {
-        res.status(500).json({ message: err.message });
+        console.error("Error deleting material:", err); // Log the actual error
+        res.status(500).json({ message: "An internal error occurred while deleting the material." });
     }
 });
 

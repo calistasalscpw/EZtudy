@@ -67,7 +67,7 @@ const CourseHome = ({ course, onSelectMaterial, onAddMaterial, progress, refresh
                 <Title>{course.title}</Title>
                 <ProgressText>Overall study progress: {Math.round(progress.percentage)}%</ProgressText>
                 <Progress 
-                    percent={progress.percentage} 
+                    percent={progress?.percentage || 0}
                     strokeColor={{
                         '0%': '#EDDD53',
                         '50%': '#57C785',
@@ -94,7 +94,7 @@ const CourseHome = ({ course, onSelectMaterial, onAddMaterial, progress, refresh
                     itemLayout="horizontal"
                     dataSource={course.materials}
                     renderItem={(item) => {
-                        const isCompleted = progress.completedMaterials?.includes(item._id);
+                        const isCompleted = progress?.completedMaterials?.includes(item._id);
                         return (
                             <List.Item
                                 style={{cursor: 'pointer'}}

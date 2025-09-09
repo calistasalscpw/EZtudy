@@ -6,7 +6,7 @@ import { PlusOutlined, SearchOutlined, EditOutlined, DeleteOutlined, MoreOutline
 import { useAuth } from '../context/AuthContext';
 import API from '../api';
 
-// Styled components for the Course Card
+// ... (Styled Components remain the same)
 const CardWrapper = styled.div`
   background-color: #FFFFFF;
   border: 1px solid #EAEAEA;
@@ -54,16 +54,33 @@ const AdminCourseActions = styled.div`
     border-radius: 16px;
     padding: 4px;
 `;
-
 const CourseCard = ({ course, onEdit, onDelete }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
+  const handleEdit = (e) => {
+      e.domEvent.stopPropagation();
+      if (onEdit) {
+          onEdit(course);
+      } else {
+          message.info('Edit functionality is not available.');
+      }
+  };
+
+  const handleDelete = (e) => {
+      e.domEvent.stopPropagation();
+      if (onDelete) {
+          onDelete(course);
+      } else {
+          message.error("Delete function not provided.");
+      }
+  };
+
   const menuItems = [
-        { key: 'edit', label: 'Edit', icon: <EditOutlined />, onClick: (e) => { e.stopPropagation(); onEdit(course); } },
-        { key: 'delete', label: 'Delete', icon: <DeleteOutlined />, danger: true, onClick: (e) => { e.stopPropagation(); onDelete(course._id); } }
+      { key: 'edit', label: 'Edit', icon: <EditOutlined />, onClick: handleEdit },
+      { key: 'delete', label: 'Delete', icon: <DeleteOutlined />, danger: true, onClick: handleDelete }
   ];
-  
+
   return (
     <CardWrapper onClick={() => navigate(`/course/${course._id}`)}>
         {user?.isAdmin && (
@@ -81,8 +98,6 @@ const CourseCard = ({ course, onEdit, onDelete }) => {
     </CardWrapper>
   );
 };
-
-// Styled components for the main section
 const CoursesContainer = styled.section`
   padding: 4rem 2rem;
   background-color: #F9FAFB;
@@ -131,9 +146,13 @@ const CoursesSection = () => {
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
-    const [isModalVisible, setIsModalVisible] = useState(false);
+    const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+    const [isEditModalVisible, setIsEditModalVisible] = useState(false);
     const [editingCourse, setEditingCourse] = useState(null);
-    const [form] = Form.useForm();
+    const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+    const [deletingCourse, setDeletingCourse] = useState(null);
+    const [addForm] = Form.useForm();
+    const [editForm] = Form.useForm();
 
     const fetchCourses = async () => {
         setLoading(true);
@@ -151,46 +170,53 @@ const CoursesSection = () => {
         fetchCourses();
     }, []); 
 
-    const handleFormSubmit = async (values) => {
+    const handleAddCourse = async (values) => {
         try {
-            if (editingCourse) {
-                await API.put(`/courses/${editingCourse._id}`, values);
-                message.success('Course updated!');
-            } else {
-                await API.post('/courses', values);
-                message.success('Course created!');
-            }
-            setIsModalVisible(false);
-            form.resetFields();
-            setEditingCourse(null);
+            await API.post('/courses', values);
+            message.success('Course created!');
+            setIsAddModalVisible(false);
+            addForm.resetFields();
             fetchCourses();
         } catch (error) {
-            message.error('Operation failed.');
+            message.error('Failed to create course.');
         }
     };
 
-    const handleEditCourse = (course) => {
+    const handleUpdateCourse = async (values) => {
+        try {
+            await API.put(`/courses/${editingCourse._id}`, values);
+            message.success('Course updated successfully!');
+            setIsEditModalVisible(false);
+            setEditingCourse(null);
+            editForm.resetFields();
+            fetchCourses();
+        } catch (error) {
+            message.error('Failed to update course.');
+        }
+    };
+    
+    const handleEditClick = (course) => {
         setEditingCourse(course);
-        form.setFieldsValue(course);
-        setIsModalVisible(true);
+        editForm.setFieldsValue(course);
+        setIsEditModalVisible(true); 
     };
 
-    const handleDeleteCourse = (courseId) => {
-        Modal.confirm({
-            title: 'Are you sure you want to delete this course?',
-            content: 'All materials within this course will also be deleted.',
-            okText: 'Delete',
-            okType: 'danger',
-            onOk: async () => {
-                try {
-                    await API.delete(`/courses/${courseId}`);
-                    message.success('Course deleted.');
-                    fetchCourses();
-                } catch (error) {
-                    message.error('Failed to delete course.');
-                }
-            }
-        });
+    const showDeleteModal = (course) => {
+        setDeletingCourse(course);
+        setIsDeleteModalVisible(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        try {
+            await API.delete(`/courses/${deletingCourse._id}`);
+            message.success('Course deleted successfully.');
+            setIsDeleteModalVisible(false);
+            setDeletingCourse(null);
+            fetchCourses(); // Refresh the list
+        } catch (error) {
+            message.error('Failed to delete course.');
+            setIsDeleteModalVisible(false);
+        }
     };
 
     const handleSearch = () => {
@@ -213,7 +239,7 @@ const CoursesSection = () => {
             prefix={<SearchOutlined />}
         />
         {user?.isAdmin && (
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsModalVisible(true)}>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsAddModalVisible(true)} style={{ background: 'linear-gradient(to right, #4C75C4, #80A8F1)', border: 'none' }}>
                 Add Course
             </Button>
         )}
@@ -221,18 +247,19 @@ const CoursesSection = () => {
 
       <Grid>
         {courses.map((course) => (
-            <CourseCard key={course._id} course={course} onEdit={handleEditCourse} onDelete={handleDeleteCourse} />
+            <CourseCard key={course._id} course={course} onEdit={handleEditClick} onDelete={showDeleteModal} />
         ))}
       </Grid>
-            
+
+      {/* Modal for ADDING a course */}
       <Modal
-          title={editingCourse ? "Edit Course" : "Add New Course"}
-          open={isModalVisible}
-          onCancel={() => { setIsModalVisible(false); setEditingCourse(null); form.resetFields(); }}
-          onOk={() => form.submit()}
-          okText={editingCourse ? "Save Changes" : "Create"}
+          title="Add New Course"
+          open={isAddModalVisible}
+          onCancel={() => setIsAddModalVisible(false)}
+          onOk={() => addForm.submit()}
+          okText="Create"
       >
-        <Form form={form} layout="vertical" onFinish={handleFormSubmit}>
+        <Form form={addForm} layout="vertical" onFinish={handleAddCourse}>
             <Form.Item name="title" label="Course Title" rules={[{ required: true }]}>
                 <Input />
             </Form.Item>
@@ -240,6 +267,38 @@ const CoursesSection = () => {
                 <Input.TextArea rows={4} />
             </Form.Item>
         </Form>
+      </Modal>
+            
+      {/* Modal for EDITING a course */}
+      <Modal
+          title="Edit Course"
+          open={isEditModalVisible}
+          onCancel={() => {
+              setIsEditModalVisible(false);
+              setEditingCourse(null);
+          }}
+          onOk={() => editForm.submit()}
+          okText="Save Changes"
+      >
+        <Form form={editForm} layout="vertical" onFinish={handleUpdateCourse}>
+            <Form.Item name="title" label="Course Title" rules={[{ required: true }]}>
+                <Input />
+            </Form.Item>
+            <Form.Item name="description" label="Description" rules={[{ required: true }]}>
+                <Input.TextArea rows={4} />
+            </Form.Item>
+        </Form>
+      </Modal>
+      <Modal
+          title="Delete Course"
+          open={isDeleteModalVisible}
+          onOk={handleConfirmDelete}
+          onCancel={() => setIsDeleteModalVisible(false)}
+          okText="Delete"
+          okType="danger"
+      >
+          <p>Are you sure you want to delete the course titled "{deletingCourse?.title}"?</p>
+          <p>All materials within this course will also be permanently deleted.</p>
       </Modal>
     </CoursesContainer>
   );

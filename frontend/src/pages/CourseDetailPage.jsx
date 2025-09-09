@@ -27,21 +27,24 @@ const MainContent = styled.main`
   position: relative;
 `;
 
-const AdminControls = styled.div`
-    position: absolute;
-    top: 2rem;
-    right: 3rem;
-`;
-
 const CourseDetailPage = () => {
     const { user } = useAuth();
     const { courseId } = useParams();
     const [course, setCourse] = useState(null);
     const [progress, setProgress] = useState({ completedMaterials: [], percentage: 0 });
     const [selectedMaterial, setSelectedMaterial] = useState(null);
-    const [isModalVisible, setIsModalVisible] = useState(false);
+    
+
+    const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+    const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+    const [editingMaterial, setEditingMaterial] = useState(null);
+    const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
+    const [deletingMaterial, setDeletingMaterial] = useState(null);
+
     const [materialType, setMaterialType] = useState('video');
-    const [form] = Form.useForm();
+    
+    const [addForm] = Form.useForm();
+    const [editForm] = Form.useForm();
 
     const fetchCourseAndProgress = async () => {
         try {
@@ -73,21 +76,66 @@ const CourseDetailPage = () => {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
             message.success('Material added successfully!');
-            setIsModalVisible(false);
-            form.resetFields();
+            setIsAddModalVisible(false);
+            addForm.resetFields();
             fetchCourseAndProgress();
         } catch (error) {
             message.error('Failed to add material.');
         }
     };
 
+    const handleEditMaterial = (material) => {
+        setEditingMaterial(material);
+        setMaterialType(material.type);
+        editForm.setFieldsValue({
+            title: material.title,
+            type: material.type,
+            source: material.type === 'video' ? material.source : undefined,
+        });
+        setIsEditModalVisible(true);
+    };
+
+    const handleUpdateMaterial = async (values) => {
+        try {
+            const payload = {
+                title: values.title,
+                source: values.source,
+            };
+            await API.put(`/courses/${courseId}/materials/${editingMaterial._id}`, payload);
+            message.success('Material updated successfully!');
+            setIsEditModalVisible(false);
+            editForm.resetFields();
+            setEditingMaterial(null);
+            
+            // Refresh data and go back to overview
+            await fetchCourseAndProgress();
+            setSelectedMaterial(null);
+        } catch (error) {
+            message.error('Failed to update material.');
+        }
+    };
+
+    const showDeleteModal = (material) => {
+        setDeletingMaterial(material);
+        setIsDeleteModalVisible(true);
+    };
+
+    const handleDeleteMaterial = async () => {
+        try {
+            await API.delete(`/courses/${deletingMaterial.course}/materials/${deletingMaterial._id}`);
+            message.success('Material deleted.');
+            setIsDeleteModalVisible(false);
+            setDeletingMaterial(null);
+            await fetchCourseAndProgress();
+            setSelectedMaterial(null); // Go back to overview
+        } catch (error) {
+            message.error(error.response?.data?.message || 'Failed to delete material.');
+            setIsDeleteModalVisible(false);
+        }
+    };
+
     if (!course) {
         return <div>Loading...</div>; 
-    }
-
-    // Function to handle clicking the "back to overview" button
-    const handleShowOverview = () => {
-        setSelectedMaterial(null);
     }
 
     return (
@@ -103,28 +151,32 @@ const CourseDetailPage = () => {
                         material={selectedMaterial} 
                         onBack={() => setSelectedMaterial(null)}
                         refreshData={fetchCourseAndProgress} 
+                        onEdit={handleEditMaterial}
+                        onDelete={showDeleteModal}
                     />
                 ) : (
                     <CourseHome 
                         course={course} 
+                        progress={progress}
                         onSelectMaterial={setSelectedMaterial}
-                        onAddMaterial={() => setIsModalVisible(true)} 
+                        onAddMaterial={() => setIsAddModalVisible(true)} 
                         refreshData={fetchCourseAndProgress}
                     />
                 )}
             </MainContent>
             
+            {/* ADD MATERIAL MODAL */}
             <Modal
                 title="Add New Material"
-                open={isModalVisible}
-                onCancel={() => setIsModalVisible(false)}
-                onOk={() => form.submit()}
+                open={isAddModalVisible}
+                onCancel={() => setIsAddModalVisible(false)}
+                onOk={() => addForm.submit()}
             >
-                <Form form={form} layout="vertical" onFinish={handleAddMaterial}>
+                <Form form={addForm} layout="vertical" onFinish={handleAddMaterial}>
                     <Form.Item name="title" label="Material Title" rules={[{ required: true }]}>
                         <Input />
                     </Form.Item>
-                    <Form.Item name="type" label="Type" rules={[{ required: true }]}>
+                    <Form.Item name="type" label="Type" rules={[{ required: true, message: 'Please select a material type' }]} initialValue="video">
                         <Select onChange={(value) => setMaterialType(value)} placeholder="Select material type">
                             <Option value="video">YouTube Video</Option>
                             <Option value="file">File Upload</Option>
@@ -142,6 +194,52 @@ const CourseDetailPage = () => {
                         </Form.Item>
                     )}
                 </Form>
+            </Modal>
+
+            {/* EDIT MATERIAL MODAL */}
+            <Modal
+                title="Edit Material"
+                open={isEditModalVisible}
+                onCancel={() => {
+                    setIsEditModalVisible(false);
+                    setEditingMaterial(null);
+                    editForm.resetFields();
+                }}
+                onOk={() => editForm.submit()}
+            >
+                <Form form={editForm} layout="vertical" onFinish={handleUpdateMaterial}>
+                    <Form.Item name="title" label="Material Title" rules={[{ required: true }]}>
+                        <Input />
+                    </Form.Item>
+                    <Form.Item name="type" label="Type">
+                        <Select disabled>
+                            <Option value="video">YouTube Video</Option>
+                            <Option value="file">File Upload</Option>
+                        </Select>
+                    </Form.Item>
+                    {editingMaterial?.type === 'video' ? (
+                        <Form.Item name="source" label="YouTube Video ID" rules={[{ required: true }]}>
+                            <Input placeholder="e.g., 13p3ALGsl4w" />
+                        </Form.Item>
+                    ) : (
+                        <Form.Item label="Upload File">
+                            <p>File replacement is not supported. Please delete and create a new material to change the file.</p>
+                        </Form.Item>
+                    )}
+                </Form>
+            </Modal>
+
+            {/* DELETE MATERIAL CONFIRMATION MODAL */}
+            <Modal
+                title="Delete Material"
+                open={isDeleteModalVisible}
+                onOk={handleDeleteMaterial}
+                onCancel={() => setIsDeleteModalVisible(false)}
+                okText="Delete"
+                okType="danger"
+            >
+                <p>Are you sure you want to delete the material titled "{deletingMaterial?.title}"?</p>
+                <p>This action cannot be undone.</p>
             </Modal>
         </PageWrapper>
     );
