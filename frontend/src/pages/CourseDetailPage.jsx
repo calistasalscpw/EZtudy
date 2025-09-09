@@ -6,10 +6,11 @@ import MaterialViewer from '../components/MaterialViewer';
 import CourseHome from '../components/CourseHome';
 import { useAuth } from '../context/AuthContext';
 import API from '../api';
-import { Button, Modal, Form, Input, Select, message, Upload } from 'antd';
-import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
+import { Button, Modal, Form, Input, Select, message, Upload, List, Avatar } from 'antd';
+import { UploadOutlined } from '@ant-design/icons';
 
 const { Option } = Select;
+const { Search } = Input;
 
 // --- Styled Components ---
 const PageWrapper = styled.div`
@@ -43,6 +44,10 @@ const CourseDetailPage = () => {
 
     const [materialType, setMaterialType] = useState('video');
     const [files, setFiles] = useState([]);
+
+    const [youtubeSearch, setYoutubeSearch] = useState('');
+    const [youtubeResults, setYoutubeResults] = useState([]);
+    const [youtubeLoading, setYoutubeLoading] = useState(false);
     
     const [addForm] = Form.useForm();
     const [editForm] = Form.useForm();
@@ -139,6 +144,22 @@ const CourseDetailPage = () => {
         }
     };
 
+    const handleYoutubeSearch = async (value) => {
+        if (!value) {
+            setYoutubeResults([]);
+            return;
+        }
+        setYoutubeLoading(true);
+        try {
+            const response = await API.get(`/youtube/search?q=${value}`);
+            setYoutubeResults(response.data);
+        } catch (error) {
+            message.error('Failed to search for videos.');
+        } finally {
+            setYoutubeLoading(false);
+        }
+    };
+
     if (!course) {
         return <div>Loading...</div>; 
     }
@@ -188,9 +209,39 @@ const CourseDetailPage = () => {
                         </Select>
                     </Form.Item>
                     {materialType === 'video' ? (
-                        <Form.Item name="source" label="YouTube Video ID" rules={[{ required: true }]}>
-                            <Input placeholder="e.g., 13p3ALGsl4w" />
-                        </Form.Item>
+                        <>
+                            <Search
+                                placeholder="Search for a YouTube video..."
+                                enterButton="Search"
+                                size="large"
+                                onSearch={handleYoutubeSearch}
+                                loading={youtubeLoading}
+                            />
+                            <List
+                                itemLayout="horizontal"
+                                dataSource={youtubeResults}
+                                renderItem={(item) => (
+                                    <List.Item
+                                        onClick={() => {
+                                            addForm.setFieldsValue({
+                                                title: item.title,
+                                                source: item.videoId,
+                                            });
+                                            setYoutubeResults([]);
+                                        }}
+                                        style={{ cursor: 'pointer' }}
+                                    >
+                                        <List.Item.Meta
+                                            avatar={<Avatar src={item.thumbnail} />}
+                                            title={item.title}
+                                        />
+                                    </List.Item>
+                                )}
+                            />
+                            <Form.Item name="source" label="YouTube Video ID" rules={[{ required: true }]}>
+                                <Input placeholder="e.g., 13p3ALGsl4w" />
+                            </Form.Item>
+                        </>
                     ) : (
                         <Form.Item name="materialFile"
                             label="Upload File"

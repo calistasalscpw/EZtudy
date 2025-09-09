@@ -8,6 +8,7 @@ import userRouter from './routers/user.js';
 import courseRouter from './routers/course.js';
 import materialRouter from './routers/material.js';
 import progressRouter from './routers/progress.js';
+import youtubeRouter from './routers/youtube.js';
 
 const app = express(); 
 
