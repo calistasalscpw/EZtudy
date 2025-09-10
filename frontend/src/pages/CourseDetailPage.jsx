@@ -7,7 +7,7 @@ import CourseHome from '../components/CourseHome';
 import { useAuth } from '../context/AuthContext';
 import API from '../api';
 import { Button, Modal, Form, Input, Select, message, Upload, List, Avatar, Spin } from 'antd';
-import { UploadOutlined } from '@ant-design/icons';
+import { UploadOutlined, LockOutlined } from '@ant-design/icons';
 
 const { Option } = Select;
 const { Search } = Input;
@@ -39,11 +39,22 @@ const GradientButton = styled(Button)`
   }
 `;
 
+const EnrollmentPrompt = styled.div`
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+  text-align: center;
+`;
+
 const CourseDetailPage = () => {
     const { user } = useAuth();
     const { courseId } = useParams();
     const [course, setCourse] = useState(null);
     const [progress, setProgress] = useState({ completedMaterials: [], percentage: 0 });
+    const [isEnrolled, setIsEnrolled] = useState(false); 
+    const [loading, setLoading] = useState(true); 
     const [selectedMaterial, setSelectedMaterial] = useState(null);
     
 
@@ -68,14 +79,27 @@ const CourseDetailPage = () => {
             const response = await API.get(`/courses/${courseId}`);
             setCourse(response.data.course);
             setProgress(response.data.progress || { completedMaterials: [], percentage: 0 });
+            setIsEnrolled(response.data.isEnrolled); 
         } catch (error) {
             message.error('Could not load course details.');
+        } finally {
+            setLoading(false);
         }
     };
 
     useEffect(() => {
         fetchCourseAndProgress();
     }, [courseId]);
+
+    const handleEnroll = async () => {
+        try {
+            await API.post(`/courses/${courseId}/enroll`);
+            message.success(`You are now enrolled in "${course.title}"!`);
+            fetchCourseAndProgress(); // Re-fetch data to update UI
+        } catch (error) {
+            message.error("Failed to enroll. Please try again.");
+        }
+    };
     
     const handleAddMaterial = async (values) => {
         const formData = new FormData();
@@ -171,6 +195,66 @@ const CourseDetailPage = () => {
         }
     };
 
+    if (loading) {
+        return <div style={{ textAlign: 'center', paddingTop: '100px' }}><Spin size="large" /></div>;
+    }
+
+    const renderMainContent = () => {
+        // Admins can always see the content
+        if (user?.isAdmin) {
+            return selectedMaterial ? (
+                <MaterialViewer 
+                    material={selectedMaterial} 
+                    onBack={() => setSelectedMaterial(null)}
+                    refreshData={fetchCourseAndProgress} 
+                    onEdit={handleEditMaterial}
+                    onDelete={showDeleteModal}
+                />
+            ) : (
+                <CourseHome 
+                    course={course} 
+                    progress={progress}
+                    onSelectMaterial={setSelectedMaterial}
+                    onAddMaterial={() => setIsAddModalVisible(true)} 
+                    refreshData={fetchCourseAndProgress}
+                />
+            );
+        }
+
+        // Students see content only if enrolled
+        if (isEnrolled) {
+            return selectedMaterial ? (
+                <MaterialViewer 
+                    material={selectedMaterial} 
+                    onBack={() => setSelectedMaterial(null)}
+                    refreshData={fetchCourseAndProgress} 
+                    onEdit={handleEditMaterial}
+                    onDelete={showDeleteModal}
+                />
+            ) : (
+                <CourseHome 
+                    course={course} 
+                    progress={progress}
+                    onSelectMaterial={setSelectedMaterial}
+                    onAddMaterial={() => setIsAddModalVisible(true)} 
+                    refreshData={fetchCourseAndProgress}
+                />
+            );
+        }
+        
+        // If not admin and not enrolled, show the enrollment prompt
+        return (
+            <EnrollmentPrompt>
+                <LockOutlined style={{ fontSize: '48px', color: '#ccc' }} />
+                <h1 style={{ marginTop: '1rem' }}>{course.title}</h1>
+                <p style={{ maxWidth: '500px', color: '#888' }}>{course.description}</p>
+                <GradientButton type="primary" size="large" onClick={handleEnroll}>
+                    Enroll in Course
+                </GradientButton>
+            </EnrollmentPrompt>
+        );
+    };
+
     if (!course) {
         return <div>Loading...</div>; 
     }
@@ -183,23 +267,7 @@ const CourseDetailPage = () => {
                 onSelectMaterial={setSelectedMaterial}
             />
             <MainContent>
-                 {selectedMaterial ? (
-                    <MaterialViewer 
-                        material={selectedMaterial} 
-                        onBack={() => setSelectedMaterial(null)}
-                        refreshData={fetchCourseAndProgress} 
-                        onEdit={handleEditMaterial}
-                        onDelete={showDeleteModal}
-                    />
-                ) : (
-                    <CourseHome 
-                        course={course} 
-                        progress={progress}
-                        onSelectMaterial={setSelectedMaterial}
-                        onAddMaterial={() => setIsAddModalVisible(true)} 
-                        refreshData={fetchCourseAndProgress}
-                    />
-                )}
+                 {renderMainContent()}
             </MainContent>
             
             {/* ADD MATERIAL MODAL */}

@@ -6,6 +6,10 @@ const router = express.Router();
 
 // POST /progress/complete
 router.post('/complete', isUserValidator, async (req, res) => {
+    if (req.user.isAdmin) {
+        return res.status(200).json({ message: 'Admin progress is not tracked.' });
+    }
+    
     const { courseId, materialId } = req.body;
     const userId = req.user._id;
 

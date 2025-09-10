@@ -5,6 +5,11 @@ import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 import userRouter from './routers/user.js';
 import courseRouter from './routers/course.js';
 import materialRouter from './routers/material.js';
@@ -43,6 +48,18 @@ app.use((req, res, next) => {
         "jwt",
         {session: false}
     )(req, res, next)
+});
+
+app.get('/download/:filename', (req, res) => {
+    const { filename } = req.params;
+    const filePath = path.join(__dirname, 'public', 'uploads', filename);
+
+    res.download(filePath, (err) => {
+        if (err) {
+            console.error("Error downloading file:", err);
+            res.status(404).json({ message: "File not found." });
+        }
+    });
 });
 
 app.use('/auth', userRouter); 
