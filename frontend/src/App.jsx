@@ -10,6 +10,7 @@ import SignupPage from './pages/Signup';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ProtectedRoute from './components/ProtectedRoute';
+import NotFoundPage from './pages/NotFoundPage';
 
 import { Layout } from 'antd';
 const { Content } = Layout;
@@ -42,6 +43,7 @@ function App() {
                 <CourseDetailPage />
               </ProtectedRoute>
             }/>
+            <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </Content>
         <Footer/>

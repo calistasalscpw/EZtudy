@@ -8,6 +8,7 @@ import userRouter from './routers/user.js';
 import courseRouter from './routers/course.js';
 import materialRouter from './routers/material.js';
 import progressRouter from './routers/progress.js';
+import youtubeRouter from './routers/youtube.js';
 
 const app = express(); 
 
@@ -39,6 +40,7 @@ app.use('/auth', userRouter);
 app.use('/courses', courseRouter);
 app.use('/materials', materialRouter);
 app.use('/progress', progressRouter);
+app.use('/youtube', youtubeRouter);
 
 app.get('/', (req, res) => {
     res.json({
@@ -49,7 +51,8 @@ app.get('/', (req, res) => {
             auth: '/auth/*',
             course: '/courses/*',
             material: '/materials/*',
-            progress: '/progress/*'
+            progress: '/progress/*',
+            youtube: '/youtube/*'
         }
     });
 });
@@ -61,7 +64,7 @@ app.use('/*splat', (req, res) => {
         success: false,
         message: 'Endpoint not found',
         path: req.originalUrl,
-        availableEndpoints: ['/auth', '/courses', '/materials', '/progress']
+        availableEndpoints: ['/auth', '/courses', '/materials', '/progress', '/youtube']
     });
 });
 

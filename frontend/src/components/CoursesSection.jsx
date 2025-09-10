@@ -1,12 +1,20 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
-import { Input, Button, Modal, Form, message, Dropdown, Space } from 'antd';
+import { Input, Button, Modal, Form, message, Dropdown, Space, Pagination, Spin } from 'antd';
 import { PlusOutlined, SearchOutlined, EditOutlined, DeleteOutlined, MoreOutlined } from '@ant-design/icons';
 import { useAuth } from '../context/AuthContext';
 import API from '../api';
 
-// ... (Styled Components remain the same)
+const gradients = [
+  'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+  'linear-gradient(135deg, #f794a4 0%, #fdd6bd 100%)',
+  'linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)',
+  'linear-gradient(135deg, #ff8c42 0%, #ffc42e 100%)',
+  'linear-gradient(135deg, #8BC6EC 0%, #9599E2 100%)',
+  'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+];
+
 const CardWrapper = styled.div`
   background-color: #FFFFFF;
   border: 1px solid #EAEAEA;
@@ -16,6 +24,8 @@ const CardWrapper = styled.div`
   cursor: pointer;
   transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
   position: relative;
+  display: flex;
+  flex-direction: column;
 
   &:hover {
     transform: translateY(-5px);
@@ -24,37 +34,55 @@ const CardWrapper = styled.div`
 `;
 
 const ImagePlaceholder = styled.div`
-  background-color: #A7C6FF; 
+  background: ${props => props.gradient};
   height: 150px;
   width: 100%;
 `;
 
 const ContentWrapper = styled.div`
-  padding: 1rem;
+  padding: 1.25rem;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
 `;
 
 const CardTitle = styled.h3`
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   font-weight: 600;
+  color: #333;
 `;
 
 const CardDescription = styled.p`
-  margin: 0.5rem 0 0 0;
+  margin: 0.5rem 0 1.5rem 0;
   font-size: 0.9rem;
   color: #8B8D98;
+  flex-grow: 1;
+`;
+
+
+const OutlinedButton = styled(Button)`
+  margin-top: auto;
+  border-color: #E0E0E0;
+  color: #555;
+  background: white !important;
+
+  &:hover {
+    border-color: #4C75C4 !important;
+    color: #4C75C4 !important;
+  }
 `;
 
 const AdminCourseActions = styled.div`
     position: absolute;
-    top: 8px;
-    right: 8px;
+    top: 12px;
+    right: 12px;
     background: rgba(255, 255, 255, 0.8);
-    backdrop-filter: blur(4px);
-    border-radius: 16px;
-    padding: 4px;
+    backdrop-filter: blur(5px);
+    border-radius: 50%;
 `;
-const CourseCard = ({ course, onEdit, onDelete }) => {
+
+const CourseCard = ({ course, onEdit, onDelete, index }) => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -82,18 +110,21 @@ const CourseCard = ({ course, onEdit, onDelete }) => {
   ];
 
   return (
-    <CardWrapper onClick={() => navigate(`/course/${course._id}`)}>
+    <CardWrapper>
         {user?.isAdmin && (
             <AdminCourseActions>
                 <Dropdown menu={{ items: menuItems }} trigger={['click']} placement="bottomRight">
-                    <Button type="text" shape="circle" icon={<MoreOutlined />} onClick={(e) => e.stopPropagation()} />
+                    <Button type="text" shape="circle" icon={<MoreOutlined style={{color: '#333'}}/>} onClick={(e) => e.stopPropagation()} />
                 </Dropdown>
             </AdminCourseActions>
         )}
-        <ImagePlaceholder />
+        <ImagePlaceholder gradient={gradients[index % gradients.length]}/>
         <ContentWrapper>
             <CardTitle>{course.title}</CardTitle>
             <CardDescription>{course.description}</CardDescription>
+            <OutlinedButton block onClick={() => navigate(`/course/${course._id}`)}>
+                Start Learning
+            </OutlinedButton>
         </ContentWrapper>
     </CardWrapper>
   );
@@ -111,9 +142,12 @@ const SectionHeader = styled.div`
 `;
 
 const SectionTitle = styled.h2`
-  font-size: 2.5rem;
-  font-weight: 700;
+  font-size: 2.8rem;
+  font-weight: 800;
   margin-bottom: 1rem;
+  background: linear-gradient(45deg, #4389A2, #5C258D);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 `;
 
 const Toolbar = styled.div`
@@ -141,24 +175,56 @@ const Grid = styled.div`
   }
 `;
 
+const PaginationContainer = styled.div`
+    display: flex;
+    justify-content: center;
+    margin-top: 3rem;
+`;
+
+const GradientButton = styled(Button)`
+  background: linear-gradient(to right, #667eea, #764ba2);
+  border: none;
+  &:hover {
+    background: linear-gradient(to right, #6a82ea, #7d53a9);
+  }
+`;
+
 const CoursesSection = () => {
     const { user } = useAuth();
+    const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+
     const [courses, setCourses] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [searchTerm, setSearchTerm] = useState('');
+
+    const [totalCourses, setTotalCourses] = useState(0);
+    const [currentPage, setCurrentPage] = useState(Number(searchParams.get('page')) || 1);
+    const [pageSize, setPageSize] = useState(Number(searchParams.get('pageSize')) || 6);
+    const [searchTerm, setSearchTerm] = useState(searchParams.get('keyword') || '');
+    
     const [isAddModalVisible, setIsAddModalVisible] = useState(false);
     const [isEditModalVisible, setIsEditModalVisible] = useState(false);
     const [editingCourse, setEditingCourse] = useState(null);
     const [isDeleteModalVisible, setIsDeleteModalVisible] = useState(false);
     const [deletingCourse, setDeletingCourse] = useState(null);
+
     const [addForm] = Form.useForm();
     const [editForm] = Form.useForm();
 
     const fetchCourses = async () => {
         setLoading(true);
+        const params = new URLSearchParams({
+            page: currentPage,
+            pageSize: pageSize,
+            keyword: searchTerm,
+        });
+
+        setSearchParams(params);
+        
         try {
-            const response = await API.get(`/courses?keyword=${searchTerm}`);
+            const response = await API.get(`/courses?${params.toString()}`);
             setCourses(response.data.data);
+            setTotalCourses(response.data.total);
         } catch (error) {
             message.error('Failed to fetch courses.');
         } finally {
@@ -168,7 +234,7 @@ const CoursesSection = () => {
     
     useEffect(() => {
         fetchCourses();
-    }, []); 
+    }, [currentPage, pageSize]); 
 
     const handleAddCourse = async (values) => {
         try {
@@ -220,11 +286,17 @@ const CoursesSection = () => {
     };
 
     const handleSearch = () => {
-        fetchCourses();
+        setCurrentPage(1);
+        fetchCourses(1, pageSize, searchTerm);
+    };
+
+    const onPageChange = (page, size) => {
+        setCurrentPage(page);
+        setPageSize(size);
     };
 
   return (
-    <CoursesContainer>
+    <CoursesContainer id="courses-section">
       <SectionHeader>
           <SectionTitle>Our Courses</SectionTitle>
       </SectionHeader>
@@ -237,27 +309,47 @@ const CoursesSection = () => {
             onPressEnter={handleSearch}
             style={{ maxWidth: '400px' }}
             prefix={<SearchOutlined />}
+            allowClear
         />
         {user?.isAdmin && (
-            <Button type="primary" icon={<PlusOutlined />} onClick={() => setIsAddModalVisible(true)} style={{ background: 'linear-gradient(to right, #4C75C4, #80A8F1)', border: 'none' }}>
+            <GradientButton type="primary" icon={<PlusOutlined />} onClick={() => setIsAddModalVisible(true)}>
                 Add Course
-            </Button>
+            </GradientButton>
         )}
       </Toolbar>
 
-      <Grid>
-        {courses.map((course) => (
-            <CourseCard key={course._id} course={course} onEdit={handleEditClick} onDelete={showDeleteModal} />
-        ))}
-      </Grid>
+      {loading ? <div style={{textAlign: 'center', padding: '50px'}}><Spin size="large" /></div> : (
+          <Grid>
+            {courses.map((course, index) => (
+                <CourseCard key={course._id} course={course} onEdit={handleEditClick} onDelete={showDeleteModal} index={index}/>
+            ))}
+          </Grid>
+      )}
+
+      <PaginationContainer>
+        <Pagination
+            current={currentPage}
+            pageSize={pageSize}
+            total={totalCourses}
+            onChange={onPageChange}
+            showSizeChanger
+            pageSizeOptions={['3', '6', '9', '12']}
+        />
+      </PaginationContainer>
 
       {/* Modal for ADDING a course */}
       <Modal
           title="Add New Course"
           open={isAddModalVisible}
           onCancel={() => setIsAddModalVisible(false)}
-          onOk={() => addForm.submit()}
-          okText="Create"
+          footer={[
+            <Button key="back" onClick={() => setIsAddModalVisible(false)}>
+              Cancel
+            </Button>,
+            <GradientButton key="submit" type="primary" onClick={() => addForm.submit()}>
+              Create
+            </GradientButton>,
+          ]}
       >
         <Form form={addForm} layout="vertical" onFinish={handleAddCourse}>
             <Form.Item name="title" label="Course Title" rules={[{ required: true }]}>
@@ -273,12 +365,15 @@ const CoursesSection = () => {
       <Modal
           title="Edit Course"
           open={isEditModalVisible}
-          onCancel={() => {
-              setIsEditModalVisible(false);
-              setEditingCourse(null);
-          }}
-          onOk={() => editForm.submit()}
-          okText="Save Changes"
+          onCancel={() => { setIsEditModalVisible(false); setEditingCourse(null); }}
+          footer={[
+            <Button key="back" onClick={() => { setIsEditModalVisible(false); setEditingCourse(null); }}>
+              Cancel
+            </Button>,
+            <GradientButton key="submit" type="primary" onClick={() => editForm.submit()}>
+              Save Changes
+            </GradientButton>,
+          ]}
       >
         <Form form={editForm} layout="vertical" onFinish={handleUpdateCourse}>
             <Form.Item name="title" label="Course Title" rules={[{ required: true }]}>

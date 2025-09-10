@@ -6,10 +6,11 @@ import MaterialViewer from '../components/MaterialViewer';
 import CourseHome from '../components/CourseHome';
 import { useAuth } from '../context/AuthContext';
 import API from '../api';
-import { Button, Modal, Form, Input, Select, message, Upload } from 'antd';
-import { PlusOutlined, UploadOutlined } from '@ant-design/icons';
+import { Button, Modal, Form, Input, Select, message, Upload, List, Avatar, Spin } from 'antd';
+import { UploadOutlined } from '@ant-design/icons';
 
 const { Option } = Select;
+const { Search } = Input;
 
 // --- Styled Components ---
 const PageWrapper = styled.div`
@@ -25,6 +26,17 @@ const MainContent = styled.main`
   overflow-y: auto;
   background-color: #F9FAFB;
   position: relative;
+`;
+
+const GradientButton = styled(Button)`
+  background: linear-gradient(to right, #667eea, #764ba2);
+  border: none;
+  color: white;
+
+  &:hover {
+    background: linear-gradient(to right, #6a82ea, #7d53a9);
+    color: white !important;
+  }
 `;
 
 const CourseDetailPage = () => {
@@ -43,6 +55,10 @@ const CourseDetailPage = () => {
 
     const [materialType, setMaterialType] = useState('video');
     const [files, setFiles] = useState([]);
+
+    const [youtubeSearch, setYoutubeSearch] = useState('');
+    const [youtubeResults, setYoutubeResults] = useState([]);
+    const [youtubeLoading, setYoutubeLoading] = useState(false);
     
     const [addForm] = Form.useForm();
     const [editForm] = Form.useForm();
@@ -139,6 +155,22 @@ const CourseDetailPage = () => {
         }
     };
 
+    const handleYoutubeSearch = async (value) => {
+        if (!value) {
+            setYoutubeResults([]);
+            return;
+        }
+        setYoutubeLoading(true);
+        try {
+            const response = await API.get(`/youtube/search?q=${value}`);
+            setYoutubeResults(response.data);
+        } catch (error) {
+            message.error('Failed to search for videos.');
+        } finally {
+            setYoutubeLoading(false);
+        }
+    };
+
     if (!course) {
         return <div>Loading...</div>; 
     }
@@ -175,7 +207,14 @@ const CourseDetailPage = () => {
                 title="Add New Material"
                 open={isAddModalVisible}
                 onCancel={() => setIsAddModalVisible(false)}
-                onOk={() => addForm.submit()}
+                footer={[
+                    <Button key="back" onClick={() => setIsAddModalVisible(false)}>
+                      Cancel
+                    </Button>,
+                    <GradientButton key="submit" type="primary" onClick={() => addForm.submit()}>
+                      Create
+                    </GradientButton>,
+                ]}
             >
                 <Form form={addForm} layout="vertical" onFinish={handleAddMaterial}>
                     <Form.Item name="title" label="Material Title" rules={[{ required: true }]}>
@@ -188,9 +227,58 @@ const CourseDetailPage = () => {
                         </Select>
                     </Form.Item>
                     {materialType === 'video' ? (
-                        <Form.Item name="source" label="YouTube Video ID" rules={[{ required: true }]}>
-                            <Input placeholder="e.g., 13p3ALGsl4w" />
-                        </Form.Item>
+                        <>
+                            <Search
+                                placeholder="Search for a YouTube video..."
+                                size="large"
+                                onSearch={handleYoutubeSearch}
+                                loading={youtubeLoading}
+                                allowClear
+                                enterButton={
+                                    <Button
+                                        type="primary"
+                                        style={{
+                                            background: "linear-gradient(to right, #667eea, #764ba2)",
+                                            border: "none",
+                                        }}
+                                    >
+                                            Search
+                                    </Button>
+                                }
+                            />
+                            <List
+                                itemLayout="horizontal"
+                                dataSource={youtubeResults}
+                                renderItem={(item) => (
+                                    <List.Item
+                                        onClick={() => {
+                                            addForm.setFieldsValue({
+                                                title: item.title,
+                                                source: item.videoId,
+                                            });
+                                            setYoutubeResults([]);
+                                        }}
+                                        style={{ 
+                                            cursor: 'pointer',
+                                            backgroundColor: '#F6F9FF',
+                                            padding: '10px',
+                                        }}
+                                    >
+                                        <List.Item.Meta
+                                            avatar={<Avatar src={item.thumbnail} />}
+                                            title={
+                                                <span style={{ color: '#3E66B4', fontWeight: 500 }}>
+                                                    {item.title}
+                                                </span>
+                                            }
+                                        />
+                                    </List.Item>
+                                )}
+                            />
+                            <Form.Item name="source" label="YouTube Video ID" rules={[{ required: true }]}>
+                                <Input placeholder="e.g., 13p3ALGsl4w" />
+                            </Form.Item>
+                        </>
                     ) : (
                         <Form.Item name="materialFile"
                             label="Upload File"
@@ -220,7 +308,14 @@ const CourseDetailPage = () => {
                     setEditingMaterial(null);
                     editForm.resetFields();
                 }}
-                onOk={() => editForm.submit()}
+                footer={[
+                    <Button key="back" onClick={() => { setIsEditModalVisible(false); setEditingMaterial(null); }}>
+                      Cancel
+                    </Button>,
+                    <GradientButton key="submit" type="primary" onClick={() => editForm.submit()}>
+                      Save Changes
+                    </GradientButton>,
+                ]}
             >
                 <Form form={editForm} layout="vertical" onFinish={handleUpdateMaterial}>
                     <Form.Item name="title" label="Material Title" rules={[{ required: true }]}>

@@ -1,11 +1,11 @@
 import express from 'express';
 import Progress from '../models/progress.model.js';
-import { isAdminValidator } from '../validators/admin.validator.js';
+import { isUserValidator } from '../validators/admin.validator.js';
 
 const router = express.Router();
 
 // POST /progress/complete
-router.post('/complete', isAdminValidator, async (req, res) => {
+router.post('/complete', isUserValidator, async (req, res) => {
     const { courseId, materialId } = req.body;
     const userId = req.user._id;
 
