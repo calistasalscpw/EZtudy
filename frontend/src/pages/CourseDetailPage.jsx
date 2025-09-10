@@ -6,7 +6,7 @@ import MaterialViewer from '../components/MaterialViewer';
 import CourseHome from '../components/CourseHome';
 import { useAuth } from '../context/AuthContext';
 import API from '../api';
-import { Button, Modal, Form, Input, Select, message, Upload, List, Avatar } from 'antd';
+import { Button, Modal, Form, Input, Select, message, Upload, List, Avatar, Spin } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 
 const { Option } = Select;
@@ -26,6 +26,17 @@ const MainContent = styled.main`
   overflow-y: auto;
   background-color: #F9FAFB;
   position: relative;
+`;
+
+const GradientButton = styled(Button)`
+  background: linear-gradient(to right, #667eea, #764ba2);
+  border: none;
+  color: white;
+
+  &:hover {
+    background: linear-gradient(to right, #6a82ea, #7d53a9);
+    color: white !important;
+  }
 `;
 
 const CourseDetailPage = () => {
@@ -196,7 +207,14 @@ const CourseDetailPage = () => {
                 title="Add New Material"
                 open={isAddModalVisible}
                 onCancel={() => setIsAddModalVisible(false)}
-                onOk={() => addForm.submit()}
+                footer={[
+                    <Button key="back" onClick={() => setIsAddModalVisible(false)}>
+                      Cancel
+                    </Button>,
+                    <GradientButton key="submit" type="primary" onClick={() => addForm.submit()}>
+                      Create
+                    </GradientButton>,
+                ]}
             >
                 <Form form={addForm} layout="vertical" onFinish={handleAddMaterial}>
                     <Form.Item name="title" label="Material Title" rules={[{ required: true }]}>
@@ -212,10 +230,21 @@ const CourseDetailPage = () => {
                         <>
                             <Search
                                 placeholder="Search for a YouTube video..."
-                                enterButton="Search"
                                 size="large"
                                 onSearch={handleYoutubeSearch}
                                 loading={youtubeLoading}
+                                allowClear
+                                enterButton={
+                                    <Button
+                                        type="primary"
+                                        style={{
+                                            background: "linear-gradient(to right, #667eea, #764ba2)",
+                                            border: "none",
+                                        }}
+                                    >
+                                            Search
+                                    </Button>
+                                }
                             />
                             <List
                                 itemLayout="horizontal"
@@ -229,11 +258,19 @@ const CourseDetailPage = () => {
                                             });
                                             setYoutubeResults([]);
                                         }}
-                                        style={{ cursor: 'pointer' }}
+                                        style={{ 
+                                            cursor: 'pointer',
+                                            backgroundColor: '#F6F9FF',
+                                            padding: '10px',
+                                        }}
                                     >
                                         <List.Item.Meta
                                             avatar={<Avatar src={item.thumbnail} />}
-                                            title={item.title}
+                                            title={
+                                                <span style={{ color: '#3E66B4', fontWeight: 500 }}>
+                                                    {item.title}
+                                                </span>
+                                            }
                                         />
                                     </List.Item>
                                 )}
@@ -271,7 +308,14 @@ const CourseDetailPage = () => {
                     setEditingMaterial(null);
                     editForm.resetFields();
                 }}
-                onOk={() => editForm.submit()}
+                footer={[
+                    <Button key="back" onClick={() => { setIsEditModalVisible(false); setEditingMaterial(null); }}>
+                      Cancel
+                    </Button>,
+                    <GradientButton key="submit" type="primary" onClick={() => editForm.submit()}>
+                      Save Changes
+                    </GradientButton>,
+                ]}
             >
                 <Form form={editForm} layout="vertical" onFinish={handleUpdateMaterial}>
                     <Form.Item name="title" label="Material Title" rules={[{ required: true }]}>

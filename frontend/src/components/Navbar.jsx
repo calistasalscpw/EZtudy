@@ -15,7 +15,7 @@ const Header = styled.header`
   z-index: 1000;
   transition: background-color 0.3s ease, box-shadow 0.3s ease, backdrop-filter 0.3s ease;
   
-  background-color: ${props => props.$isScrolled ? 'rgba(240, 245, 255, 0.8)' : 'transparent'};
+  background-color: ${props => props.$isScrolled ? 'rgba(240, 245, 255, 0.8)' : '#f6f9ff77'};
   backdrop-filter: ${props => props.$isScrolled ? 'blur(10px)' : 'none'};
   box-shadow: ${props => props.$isScrolled ? '0 2px 10px rgba(0, 0, 0, 0.05)' : 'none'};
 `;
@@ -140,8 +140,8 @@ const Navbar = () => {
                         </Dropdown>
                     ) : (
                         <>
-                            <StyledLink to="/login">Login</StyledLink>
-                            <StyledLink to="/signup">Signup</StyledLink>
+                            <StyledLink to="/auth/login">Login</StyledLink>
+                            <StyledLink to="/auth/signup">Signup</StyledLink>
                         </>
                     )}
                 </NavLinks>
@@ -157,8 +157,8 @@ const Navbar = () => {
                     <LogoutButton onClick={() => { handleLinkClick(); logout(); }}>Logout</LogoutButton>
                 ) : (
                     <>
-                        <StyledLink to="/login" onClick={handleLinkClick}>Login</StyledLink>
-                        <StyledLink to="/signup" onClick={handleLinkClick}>Signup</StyledLink>
+                        <StyledLink to="/auth/login" onClick={handleLinkClick}>Login</StyledLink>
+                        <StyledLink to="/auth/signup" onClick={handleLinkClick}>Signup</StyledLink>
                     </>
                 )}
             </MobileMenu>

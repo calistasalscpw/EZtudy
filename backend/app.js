@@ -51,7 +51,8 @@ app.get('/', (req, res) => {
             auth: '/auth/*',
             course: '/courses/*',
             material: '/materials/*',
-            progress: '/progress/*'
+            progress: '/progress/*',
+            youtube: '/youtube/*'
         }
     });
 });
@@ -63,7 +64,7 @@ app.use('/*splat', (req, res) => {
         success: false,
         message: 'Endpoint not found',
         path: req.originalUrl,
-        availableEndpoints: ['/auth', '/courses', '/materials', '/progress']
+        availableEndpoints: ['/auth', '/courses', '/materials', '/progress', '/youtube']
     });
 });
 

@@ -64,7 +64,7 @@ const SignupForm = () => {
           </StyledButton>
         </Form.Item>
         <Text type="secondary" style={{ textAlign: 'center', display: 'block' }}>
-          Already have an account? <Link href="/login">Login here!</Link>
+          Already have an account? <Link href="/auth/login">Login here!</Link>
         </Text>
       </Form>
     </FormContainer>
