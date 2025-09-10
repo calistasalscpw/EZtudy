@@ -2,6 +2,7 @@ import express from 'express';
 import Course from '../models/courses.model.js';
 import Material from '../models/materials.model.js';
 import Progress from '../models/progress.model.js';
+import User from '../models/users.model.js';
 import materialRouter from './material.js'; 
 
 import { isUserValidator, isAdminValidator } from '../validators/admin.validator.js';
@@ -45,8 +46,13 @@ router.get('/:courseId', async (req, res) => {
             percentage: 0
         };
 
-        // If a user is logged in, fetch their progress
+        let isEnrolled = false;
+
+        // If a user is logged in, fetch their progress and check enrollment
         if (req.user) {
+            // Check if courseId is in the user's courses array
+            isEnrolled = req.user.courses.some(enrolledCourseId => enrolledCourseId.equals(req.params.courseId));
+
             const progress = await Progress.findOne({ user: req.user._id, course: req.params.courseId });
             if (progress) {
                 progressData.completedMaterials = progress.completedMaterials;
@@ -56,9 +62,41 @@ router.get('/:courseId', async (req, res) => {
             }
         }
 
-        res.json({ course, progress: progressData });
+        res.json({ course, progress: progressData, isEnrolled });
     } catch (err) {
         res.status(500).json({ message: err.message });
+    }
+});
+
+// POST /courses/:courseId/enroll (User only)
+router.post('/:courseId/enroll', isUserValidator, async (req, res) => {
+    try {
+        const { courseId } = req.params;
+        const userId = req.user._id;
+
+        // Add course to user's enrolled list and user to course's enrolled list
+        await User.findByIdAndUpdate(userId, { $addToSet: { courses: courseId } });
+        await Course.findByIdAndUpdate(courseId, { $addToSet: { enrolledUsers: userId } });
+
+        res.status(200).json({ message: 'Successfully enrolled in the course.' });
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to enroll in the course.' });
+    }
+});
+
+// POST /courses/:courseId/unenroll (User only)
+router.post('/:courseId/unenroll', isUserValidator, async (req, res) => {
+    try {
+        const { courseId } = req.params;
+        const userId = req.user._id;
+
+        // Remove course from user's list and user from course's list
+        await User.findByIdAndUpdate(userId, { $pull: { courses: courseId } });
+        await Course.findByIdAndUpdate(courseId, { $pull: { enrolledUsers: userId } });
+
+        res.status(200).json({ message: 'Successfully unenrolled from the course.' });
+    } catch (err) {
+        res.status(500).json({ message: 'Failed to unenroll from the course.' });
     }
 });
 

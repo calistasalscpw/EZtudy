@@ -34,7 +34,7 @@ const CardWrapper = styled.div`
 `;
 
 const ImagePlaceholder = styled.div`
-  background: ${props => props.gradient};
+  background: ${props => props.$gradient};
   height: 150px;
   width: 100%;
 `;
@@ -118,7 +118,7 @@ const CourseCard = ({ course, onEdit, onDelete, index }) => {
                 </Dropdown>
             </AdminCourseActions>
         )}
-        <ImagePlaceholder gradient={gradients[index % gradients.length]}/>
+        <ImagePlaceholder $gradient={gradients[index % gradients.length]}/>
         <ContentWrapper>
             <CardTitle>{course.title}</CardTitle>
             <CardDescription>{course.description}</CardDescription>

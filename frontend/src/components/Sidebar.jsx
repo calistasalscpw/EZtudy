@@ -95,7 +95,7 @@ const Sidebar = ({ course, selectedMaterialId, onSelectMaterial }) => {
             <MaterialList>
                 {course.materials.map(material => (
                     <MaterialItem
-                        key={material.id}
+                        key={material._id}
                         $isActive={material.id === selectedMaterialId}
                         onClick={() => onSelectMaterial(material)}
                     >

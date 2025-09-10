@@ -23,7 +23,7 @@ router.get('/search', async (req, res) => {
             part: 'snippet',
             q: q,
             type: 'video',
-            maxResults: 10, // You can adjust the number of results
+            maxResults: 10, 
         });
 
         const searchResults = response.data.items.map(item => ({
@@ -35,6 +35,9 @@ router.get('/search', async (req, res) => {
         res.json(searchResults);
     } catch (error) {
         console.error('Error searching YouTube:', error);
+        if (error.response && error.response.status === 403) {
+            return res.status(403).json({ message: 'YouTube API quota exceeded. Please try again later.' });
+        }
         res.status(500).json({ message: 'Failed to search YouTube videos.' });
     }
 });

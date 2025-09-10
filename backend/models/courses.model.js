@@ -12,6 +12,10 @@ const CourseSchema = new mongoose.Schema(
         materials: [{ 
             type: mongoose.Schema.Types.ObjectId, 
             ref: 'Material' 
+        }],
+        enrolledUsers: [{ 
+            type: mongoose.Schema.Types.ObjectId, 
+            ref: 'User' 
         }]
     }, { 
         timestamps: true 

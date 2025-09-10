@@ -6,12 +6,12 @@ This directory contains the source code for the EZtudy frontend, a modern and re
 
 ## Features
 
-- **Component-Based Architecture**: Built with reusable React components for maintainability.
-- **UI Framework**: Utilizes Ant Design for a high-quality, consistent design system.
-- **Styling**: Styled-Components for dynamic and scoped CSS.
-- **State Management**: Leverages React Context API for global state management (e.g., authentication).
-- **Client-Side Routing**: Handled by React Router DOM for seamless navigation.
-- **API Communication**: Uses Axios for making HTTP requests to the backend API.
+-   **Component-Based Architecture**: Built with reusable React components for maintainability and a consistent user experience.
+-   **UI Framework**: Utilizes Ant Design for a comprehensive suite of high-quality UI components.
+-   **Styling**: Employs Styled-Components for writing component-scoped CSS, enabling dynamic and maintainable styling.
+-   **State Management**: Leverages the React Context API for managing global state, such as user authentication, across the application.
+-   **Client-Side Routing**: Handled by React Router DOM for seamless navigation and a single-page application experience.
+-   **API Communication**: Uses Axios for making HTTP requests to the backend API, with interceptors for handling authentication tokens and global error handling.
 
 ---
 
@@ -19,8 +19,8 @@ This directory contains the source code for the EZtudy frontend, a modern and re
 
 ### Prerequisites
 
-- Node.js and npm installed.
-- The backend server must be running.
+-   Node.js and npm installed.
+-   The backend server must be running.
 
 ### Setup Instructions
 
@@ -45,6 +45,6 @@ The frontend application will be available at `http://localhost:5173`.
 
 ## Scripts
 
-- `npm run dev`: Starts the Vite development server.
-- `npm run build`: Bundles the application for production.
-- `npm run preview`: Serves the production build locally.
+-   `npm run dev`: Starts the Vite development server with hot module replacement.
+-   `npm run build`: Bundles the application for production.
+-   `npm run preview`: Serves the production build locally for testing.

@@ -3,6 +3,12 @@ import cors from 'cors';
 import passport from 'passport';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
+import rateLimit from 'express-rate-limit';
+
+import path from 'path';
+import { fileURLToPath } from 'url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 import userRouter from './routers/user.js';
 import courseRouter from './routers/course.js';
@@ -24,6 +30,14 @@ app.use(cors({
 app.use(express.json());
 app.use(express.static("public"));
 app.use(express.urlencoded({extended: true}));
+const limiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per windowMs
+    standardHeaders: true,
+    legacyHeaders: false,
+});
+
+app.use(limiter);
 
 // Authentication middleware
 app.use((req, res, next) => {
@@ -34,6 +48,18 @@ app.use((req, res, next) => {
         "jwt",
         {session: false}
     )(req, res, next)
+});
+
+app.get('/download/:filename', (req, res) => {
+    const { filename } = req.params;
+    const filePath = path.join(__dirname, 'public', 'uploads', filename);
+
+    res.download(filePath, (err) => {
+        if (err) {
+            console.error("Error downloading file:", err);
+            res.status(404).json({ message: "File not found." });
+        }
+    });
 });
 
 app.use('/auth', userRouter); 
